@@ -14,6 +14,7 @@ interface GameState {
   isLoading: boolean;
   error: string | null;
   showAccusation: boolean;
+  showBriefing: boolean;
   verdict: {
     correct: boolean;
     correctSuspect: boolean;
@@ -34,6 +35,7 @@ const initialState: GameState = {
   isLoading: false,
   error: null,
   showAccusation: false,
+  showBriefing: false,
   verdict: null,
 };
 
@@ -47,6 +49,7 @@ type GameAction =
   | { type: "ADD_MESSAGE"; payload: { suspectId: string; message: ChatMessage } }
   | { type: "DECREMENT_QUESTIONS" }
   | { type: "SHOW_ACCUSATION"; payload: boolean }
+  | { type: "SHOW_BRIEFING"; payload: boolean }
   | { type: "SET_VERDICT"; payload: GameState["verdict"] }
   | { type: "RESET" };
 
@@ -70,6 +73,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         difficulty: action.payload.difficulty,
         questionsRemaining: config.maxQuestions,
         chatHistories: histories,
+        activeSuspectId: action.payload.caseData.suspects[0]?.id || null,
+        showBriefing: true,
       };
     }
     case "SELECT_SUSPECT":
@@ -89,6 +94,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, questionsRemaining: Math.max(0, state.questionsRemaining - 1) };
     case "SHOW_ACCUSATION":
       return { ...state, showAccusation: action.payload };
+    case "SHOW_BRIEFING":
+      return { ...state, showBriefing: action.payload };
     case "SET_VERDICT":
       return { ...state, verdict: action.payload, showAccusation: false };
     case "RESET":
