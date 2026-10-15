@@ -18,6 +18,8 @@ import {
     CheckCircle2,
     Loader2,
     ArrowRight,
+    FolderOpen,
+    FileText,
 } from "lucide-react";
 import { DIFFICULTY_CONFIGS, type Difficulty } from "@/types/case";
 
@@ -77,6 +79,8 @@ export default function LandingPage() {
     const router = useRouter();
     const reduceMotion = useReducedMotion();
 
+    const hasActiveCase = Boolean(state.activeCase && !state.verdict);
+
     // Window scroll progress indicator
     const { scrollYProgress } = useScroll();
     const scrollBarWidth = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
@@ -102,7 +106,7 @@ export default function LandingPage() {
                 />
             </div>
 
-            {/* Top Sticky Header with Direct "Start Case" Action */}
+            {/* Top Sticky Header with Direct "Start Case" or "Return to Case" Action */}
             <header className="fixed left-0 right-0 top-0 z-40 backdrop-blur-md bg-zinc-950/90 border-b border-zinc-800 px-4 sm:px-6 py-3 transition-colors">
                 <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 sm:gap-3">
@@ -119,24 +123,35 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleLaunchCase}
-                        disabled={state.isLoading}
-                        className="bg-amber-700 hover:bg-amber-600 active:scale-95 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                        {state.isLoading ? (
-                            <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Starting...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Skull className="w-3.5 h-3.5 text-amber-200" />
-                                <span>Start Case</span>
-                                <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
-                            </>
-                        )}
-                    </button>
+                    {hasActiveCase ? (
+                        <button
+                            onClick={() => router.push("/game")}
+                            className="bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer ring-1 ring-amber-400/40"
+                        >
+                            <FolderOpen className="w-3.5 h-3.5 text-amber-200" />
+                            <span>Return to Case</span>
+                            <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleLaunchCase}
+                            disabled={state.isLoading}
+                            className="bg-amber-700 hover:bg-amber-600 active:scale-95 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            {state.isLoading ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Starting...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Skull className="w-3.5 h-3.5 text-amber-200" />
+                                    <span>Start Case</span>
+                                    <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -183,6 +198,45 @@ export default function LandingPage() {
                     </div>
                 )}
 
+                {/* Active Case Banner if player has an ongoing investigation */}
+                {hasActiveCase && state.activeCase && (
+                    <motion.div
+                        initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-6 bg-gradient-to-r from-amber-950/50 via-zinc-900 to-zinc-900 border border-amber-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    >
+                        <div className="flex items-start gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-xl bg-amber-950 border border-amber-600/70 flex items-center justify-center shrink-0 mt-0.5 shadow-md">
+                                <FolderOpen className="w-5 h-5 text-amber-300" />
+                            </div>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
+                                        Investigation in Progress
+                                    </span>
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 uppercase">
+                                        {DIFFICULTY_CONFIGS[state.difficulty]?.label || state.difficulty}
+                                    </span>
+                                </div>
+                                <h3 className="text-base sm:text-lg font-bold text-zinc-100 truncate mt-0.5">
+                                    {state.activeCase.title}
+                                </h3>
+                                <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                                    Victim: <span className="text-zinc-200">{state.activeCase.victim.name}</span> · <span className="text-amber-400 font-bold">{state.questionsRemaining}</span> Qs remaining
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => router.push("/game")}
+                            className="bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center shrink-0 ring-1 ring-amber-400/40"
+                        >
+                            <span>Return to Case</span>
+                            <ArrowRight className="w-4 h-4" />
+                        </button>
+                    </motion.div>
+                )}
+
                 {/* The Difficulty Slider & Case Launcher */}
                 <motion.div
                     initial={reduceMotion ? false : { opacity: 0, y: 20 }}
@@ -194,6 +248,8 @@ export default function LandingPage() {
                         difficulty={selectedDifficulty}
                         onChange={handleDifficultyChange}
                         onLaunch={handleLaunchCase}
+                        onResume={() => router.push("/game")}
+                        hasActiveCase={hasActiveCase}
                         isLoading={state.isLoading}
                     />
                 </motion.div>

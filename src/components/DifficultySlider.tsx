@@ -12,6 +12,8 @@ import {
   FileSearch,
   ArrowRight,
   Loader2,
+  FolderOpen,
+  RotateCcw,
 } from "lucide-react";
 import {
   DIFFICULTIES,
@@ -23,6 +25,8 @@ interface DifficultySliderProps {
   difficulty: Difficulty;
   onChange: (diff: Difficulty) => void;
   onLaunch?: () => void;
+  onResume?: () => void;
+  hasActiveCase?: boolean;
   isLoading?: boolean;
 }
 
@@ -80,6 +84,8 @@ export default function DifficultySlider({
   difficulty,
   onChange,
   onLaunch,
+  onResume,
+  hasActiveCase = false,
   isLoading = false,
 }: DifficultySliderProps) {
   const reduceMotion = useReducedMotion();
@@ -254,30 +260,66 @@ export default function DifficultySlider({
           </div>
         </motion.div>
 
-        {/* Integrated Launch Button */}
+        {/* Integrated Launch / Resume Button */}
         {onLaunch && (
           <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
             <div className="text-xs font-mono text-zinc-400 text-center sm:text-left">
               Configured with <span className="text-zinc-200 font-bold">{currentConfig.suspectCount} suspects</span> and <span className="text-zinc-200 font-bold">{currentConfig.maxQuestions} questions</span>
             </div>
-            <button
-              onClick={onLaunch}
-              disabled={isLoading}
-              className={`w-full sm:w-auto ${theme.buttonBg} active:scale-95 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider px-6 sm:px-8 py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50`}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating Case...
-                </>
-              ) : (
-                <>
-                  <Skull className="w-4 h-4 text-amber-200" />
-                  Start {currentConfig.label} Case
+
+            {hasActiveCase && onResume ? (
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={onResume}
+                  className="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider px-6 sm:px-7 py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer ring-1 ring-amber-400/40"
+                >
+                  <FolderOpen className="w-4 h-4 text-amber-200" />
+                  Return to Current Case
                   <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onLaunch}
+                  disabled={isLoading}
+                  className="w-full sm:w-auto bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase tracking-wider px-4 py-3 rounded-xl transition-all border border-zinc-700 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="Abandon active case and start a new one"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Start New Case
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onLaunch}
+                disabled={isLoading}
+                className={`w-full sm:w-auto ${theme.buttonBg} active:scale-95 text-white font-mono text-xs sm:text-sm font-bold uppercase tracking-wider px-6 sm:px-8 py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50`}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating Case...
+                  </>
+                ) : (
+                  <>
+                    <Skull className="w-4 h-4 text-amber-200" />
+                    Start {currentConfig.label} Case
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>
