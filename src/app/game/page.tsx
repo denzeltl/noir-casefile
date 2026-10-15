@@ -36,24 +36,27 @@ export default function GamePage() {
   } | null>(null);
   const [inspectedSuspect, setInspectedSuspect] = useState<Suspect | null>(null);
 
-  // Redirect to landing if no active case
+  // Redirect to landing if no active case (only after hydration)
   useEffect(() => {
+    if (!state.isHydrated) return;
     if (!state.activeCase && !state.isLoading) {
       router.replace("/");
     }
-  }, [state.activeCase, state.isLoading, router]);
+  }, [state.isHydrated, state.activeCase, state.isLoading, router]);
 
-  // Loading state when waiting for new case
-  if (state.isLoading && !state.activeCase) {
+  // Loading state when waiting for hydration or new case
+  if (!state.isHydrated || (state.isLoading && !state.activeCase)) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center dossier-grid px-4">
         <div className="text-center bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm w-full shadow-2xl">
           <Loader2 className="w-10 h-10 mx-auto animate-spin text-amber-500 mb-4" />
           <h2 className="text-lg font-bold text-zinc-100 font-mono uppercase tracking-wide">
-            Drafting Murder Dossier...
+            {!state.isHydrated ? "Retrieving Casefile..." : "Drafting Murder Dossier..."}
           </h2>
           <p className="text-xs text-zinc-400 mt-2 font-mono">
-            Generating crime scene, verifying alibis, and planting clues.
+            {!state.isHydrated
+              ? "Reopening sealed police archives and evidence locker."
+              : "Generating crime scene, verifying alibis, and planting clues."}
           </p>
         </div>
       </div>

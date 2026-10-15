@@ -1,8 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useCallback,
+  useEffect,
+} from "react";
 import type { Case, ChatMessage, Difficulty } from "@/types/case";
 import { DIFFICULTY_CONFIGS } from "@/types/case";
+
+const STORAGE_KEY = "noir_casefile_save_v1";
 
 // ─── State ──────────────────────────────────────────────────────────────────
 interface GameState {
@@ -15,6 +23,7 @@ interface GameState {
   error: string | null;
   showAccusation: boolean;
   showBriefing: boolean;
+  isHydrated: boolean;
   verdict: {
     correct: boolean;
     correctSuspect: boolean;
@@ -36,6 +45,7 @@ const initialState: GameState = {
   error: null,
   showAccusation: false,
   showBriefing: false,
+  isHydrated: false,
   verdict: null,
 };
 
@@ -51,6 +61,8 @@ type GameAction =
   | { type: "SHOW_ACCUSATION"; payload: boolean }
   | { type: "SHOW_BRIEFING"; payload: boolean }
   | { type: "SET_VERDICT"; payload: GameState["verdict"] }
+  | { type: "RESTORE_STATE"; payload: Partial<GameState> }
+  | { type: "SET_HYDRATED" }
   | { type: "RESET" };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -75,6 +87,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         chatHistories: histories,
         activeSuspectId: action.payload.caseData.suspects[0]?.id || null,
         showBriefing: true,
+        isHydrated: true,
       };
     }
     case "SELECT_SUSPECT":
@@ -91,15 +104,32 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         },
       };
     case "DECREMENT_QUESTIONS":
-      return { ...state, questionsRemaining: Math.max(0, state.questionsRemaining - 1) };
+      return {
+        ...state,
+        questionsRemaining: Math.max(0, state.questionsRemaining - 1),
+      };
     case "SHOW_ACCUSATION":
       return { ...state, showAccusation: action.payload };
     case "SHOW_BRIEFING":
       return { ...state, showBriefing: action.payload };
     case "SET_VERDICT":
       return { ...state, verdict: action.payload, showAccusation: false };
+    case "RESTORE_STATE":
+      return {
+        ...state,
+        ...action.payload,
+        isLoading: false,
+        error: null,
+        isHydrated: true,
+      };
+    case "SET_HYDRATED":
+      return { ...state, isHydrated: true };
     case "RESET":
-      return { ...initialState, difficulty: state.difficulty };
+      return {
+        ...initialState,
+        difficulty: state.difficulty,
+        isHydrated: true,
+      };
     default:
       return state;
   }
@@ -111,7 +141,11 @@ interface GameContextValue {
   dispatch: React.Dispatch<GameAction>;
   generateCase: (difficulty?: Difficulty) => Promise<void>;
   interrogate: (suspectId: string, question: string) => Promise<void>;
-  submitAccusation: (suspectId: string, weapon: string, evidence: string) => Promise<void>;
+  submitAccusation: (
+    suspectId: string,
+    weapon: string,
+    evidence: string
+  ) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -119,31 +153,83 @@ const GameContext = createContext<GameContextValue | null>(null);
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
 
-  const generateCase = useCallback(async (difficulty: Difficulty = "medium") => {
-    dispatch({ type: "SET_LOADING", payload: true });
-    dispatch({ type: "SET_ERROR", payload: null });
-
+  // 1. Hydrate state from localStorage on initial browser load
+  useEffect(() => {
     try {
-      const res = await fetch("/api/generate-case", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ difficulty }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to generate case");
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.activeCase) {
+          dispatch({ type: "RESTORE_STATE", payload: parsed });
+          return;
+        }
       }
-      const caseData: Case = await res.json();
-      dispatch({ type: "SET_CASE", payload: { caseData, difficulty } });
-    } catch (err) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: err instanceof Error ? err.message : "Unknown error",
-      });
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
+    } catch (e) {
+      console.error("Failed to restore saved casefile from localStorage", e);
     }
+    dispatch({ type: "SET_HYDRATED" });
   }, []);
+
+  // 2. Synchronize active state changes to localStorage
+  useEffect(() => {
+    if (!state.isHydrated) return;
+    try {
+      if (state.activeCase) {
+        const toSave = {
+          activeCase: state.activeCase,
+          difficulty: state.difficulty,
+          questionsRemaining: state.questionsRemaining,
+          chatHistories: state.chatHistories,
+          activeSuspectId: state.activeSuspectId,
+          showBriefing: state.showBriefing,
+          verdict: state.verdict,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (e) {
+      console.error("Failed to persist casefile to localStorage", e);
+    }
+  }, [
+    state.isHydrated,
+    state.activeCase,
+    state.difficulty,
+    state.questionsRemaining,
+    state.chatHistories,
+    state.activeSuspectId,
+    state.showBriefing,
+    state.verdict,
+  ]);
+
+  const generateCase = useCallback(
+    async (difficulty: Difficulty = "medium") => {
+      dispatch({ type: "SET_LOADING", payload: true });
+      dispatch({ type: "SET_ERROR", payload: null });
+
+      try {
+        const res = await fetch("/api/generate-case", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ difficulty }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Failed to generate case");
+        }
+        const caseData: Case = await res.json();
+        dispatch({ type: "SET_CASE", payload: { caseData, difficulty } });
+      } catch (err) {
+        dispatch({
+          type: "SET_ERROR",
+          payload: err instanceof Error ? err.message : "Unknown error",
+        });
+      } finally {
+        dispatch({ type: "SET_LOADING", payload: false });
+      }
+    },
+    []
+  );
 
   const interrogate = useCallback(
     async (suspectId: string, question: string) => {
@@ -183,7 +269,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         dispatch({
           type: "ADD_MESSAGE",
-          payload: { suspectId, message: { role: "assistant", content: data.reply } },
+          payload: {
+            suspectId,
+            message: { role: "assistant", content: data.reply },
+          },
         });
       } catch (err) {
         dispatch({
@@ -194,7 +283,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "SET_LOADING", payload: false });
       }
     },
-    [state.activeCase, state.questionsRemaining, state.chatHistories, state.difficulty]
+    [
+      state.activeCase,
+      state.questionsRemaining,
+      state.chatHistories,
+      state.difficulty,
+    ]
   );
 
   const submitAccusation = useCallback(
@@ -231,7 +325,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <GameContext.Provider value={{ state, dispatch, generateCase, interrogate, submitAccusation }}>
+    <GameContext.Provider
+      value={{
+        state,
+        dispatch,
+        generateCase,
+        interrogate,
+        submitAccusation,
+      }}
+    >
       {children}
     </GameContext.Provider>
   );

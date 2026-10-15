@@ -79,7 +79,7 @@ export default function LandingPage() {
     const router = useRouter();
     const reduceMotion = useReducedMotion();
 
-    const hasActiveCase = Boolean(state.activeCase && !state.verdict);
+    const hasActiveCase = state.isHydrated && Boolean(state.activeCase && !state.verdict);
 
     // Window scroll progress indicator
     const { scrollYProgress } = useScroll();
