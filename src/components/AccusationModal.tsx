@@ -72,7 +72,7 @@ export default function AccusationModal() {
                 <XCircle className="w-4 h-4 text-red-400 shrink-0" />
               )}
               <div className="truncate">
-                <div className="text-[10px] text-zinc-400">Suspect</div>
+                <div className="text-xs text-zinc-300">Suspect</div>
                 <div className="font-bold truncate">
                   {v.correctSuspect ? "Identified" : v.actualKillerName}
                 </div>
@@ -92,7 +92,7 @@ export default function AccusationModal() {
                 <XCircle className="w-4 h-4 text-red-400 shrink-0" />
               )}
               <div className="truncate">
-                <div className="text-[10px] text-zinc-400">Murder Weapon</div>
+                <div className="text-xs text-zinc-300">Murder Weapon</div>
                 <div className="font-bold truncate">
                   {v.correctWeapon ? "Matched" : v.actualWeapon}
                 </div>
@@ -160,7 +160,7 @@ export default function AccusationModal() {
         {/* Close Button */}
         <button
           onClick={() => dispatch({ type: "SHOW_ACCUSATION", payload: false })}
-          className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -174,7 +174,7 @@ export default function AccusationModal() {
             <h2 className="text-lg sm:text-xl font-black text-zinc-100 tracking-tight">
               File Formal Indictment
             </h2>
-            <p className="text-xs text-zinc-400 font-mono">
+            <p className="text-xs text-zinc-300 font-mono">
               Provide your evidence. The court&apos;s verdict is final.
             </p>
           </div>
@@ -211,7 +211,7 @@ export default function AccusationModal() {
                         <span className="font-bold text-xs sm:text-sm block truncate">
                           {s.name}
                         </span>
-                        <span className="text-[11px] text-zinc-400 block truncate">
+                        <span className="text-xs text-zinc-300 block truncate">
                           {s.occupation} · {s.relationshipToVictim}
                         </span>
                       </div>
@@ -234,18 +234,18 @@ export default function AccusationModal() {
               value={weapon}
               onChange={(e) => setWeapon(e.target.value)}
               placeholder="e.g. Ornate bronze candlestick, cyanide vial, heavy statuette..."
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
             {/* Clue suggestions */}
             {state.activeCase?.clues && (
               <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-mono text-zinc-500">Quick suggestions:</span>
+                <span className="text-xs font-mono text-zinc-400">Quick suggestions:</span>
                 {state.activeCase.clues.slice(0, 3).map((c) => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => handleWeaponSuggestion(c.name)}
-                    className="text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 px-2 py-0.5 rounded cursor-pointer transition-colors truncate max-w-[140px]"
+                    className="text-xs font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 px-2 py-1 rounded cursor-pointer transition-colors truncate max-w-[160px]"
                   >
                     {c.name}
                   </button>
@@ -264,7 +264,7 @@ export default function AccusationModal() {
               onChange={(e) => setEvidence(e.target.value)}
               placeholder="Explain which clue refutes their alibi and establishes their guilt..."
               rows={3}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 transition-colors resize-none"
             />
           </div>
 

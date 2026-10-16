@@ -53,7 +53,7 @@ export default function GamePage() {
           <h2 className="text-lg font-bold text-zinc-100 font-mono uppercase tracking-wide">
             {!state.isHydrated ? "Retrieving Casefile..." : "Drafting Murder Dossier..."}
           </h2>
-          <p className="text-xs text-zinc-400 mt-2 font-mono">
+          <p className="text-xs text-zinc-300 mt-2 font-mono">
             {!state.isHydrated
               ? "Reopening sealed police archives and evidence locker."
               : "Generating crime scene, verifying alibis, and planting clues."}
@@ -135,7 +135,7 @@ export default function GamePage() {
               <Users className="w-3.5 h-3.5" />
               Suspect Lineup
             </h2>
-            <span className="text-[10px] font-mono text-zinc-400">
+            <span className="text-xs font-mono text-zinc-300">
               {state.activeCase.suspects.length} Persons
             </span>
           </div>

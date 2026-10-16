@@ -71,10 +71,10 @@ export default function CaseBriefingModal() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-amber-500 font-bold">
+                <span className="text-xs font-mono uppercase tracking-widest text-amber-500 font-bold">
                   Confidential Homicide Dossier
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60 uppercase">
+                <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60 uppercase">
                   {diffConfig.label}
                 </span>
               </div>
@@ -114,7 +114,7 @@ export default function CaseBriefingModal() {
                       : "text-zinc-400 hover:text-zinc-300"
                   }`}
                 >
-                  <span className="w-4 h-4 rounded-full bg-zinc-950 text-[10px] flex items-center justify-center font-bold">
+                  <span className="w-5 h-5 rounded-full bg-zinc-950 text-xs flex items-center justify-center font-bold">
                     {step.id}
                   </span>
                   <span className="hidden sm:inline">{step.title}</span>
@@ -123,7 +123,7 @@ export default function CaseBriefingModal() {
             })}
           </div>
 
-          <div className="text-[11px] font-mono text-zinc-400">
+          <div className="text-xs font-mono text-zinc-300">
             Step {currentStep} of 3
           </div>
         </div>
@@ -150,11 +150,11 @@ export default function CaseBriefingModal() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
-                      <div className="text-xs text-zinc-400 font-mono">Full Name</div>
+                      <div className="text-xs text-zinc-300 font-mono">Full Name</div>
                       <div className="text-base font-bold text-zinc-100">{c.victim.name}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-zinc-400 font-mono">Age & Occupation</div>
+                      <div className="text-xs text-zinc-300 font-mono">Age & Occupation</div>
                       <div className="text-zinc-200">
                         {c.victim.age} years old · {c.victim.occupation}
                       </div>
@@ -177,7 +177,7 @@ export default function CaseBriefingModal() {
 
                 {/* Case Narrative */}
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                  <div className="text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2 font-bold">
+                  <div className="text-xs font-mono uppercase tracking-wider text-zinc-300 mb-2 font-bold">
                     Detective Dispatch Notes
                   </div>
                   <p className="text-sm text-zinc-300 italic leading-relaxed font-serif">
@@ -201,7 +201,7 @@ export default function CaseBriefingModal() {
                     <Search className="w-4 h-4" />
                     Physical Evidence Log ({c.clues.length} Items)
                   </div>
-                  <span className="text-[11px] font-mono text-zinc-400">
+                  <span className="text-xs font-mono text-zinc-300">
                     Cross-reference with alibis
                   </span>
                 </div>
@@ -221,7 +221,7 @@ export default function CaseBriefingModal() {
                             {clue.name}
                           </h4>
                         </div>
-                        <div className="flex items-center gap-1 text-[11px] font-mono text-zinc-400">
+                        <div className="flex items-center gap-1 text-xs font-mono text-zinc-300">
                           <MapPin className="w-3 h-3 text-amber-500" />
                           <span>{clue.location}</span>
                         </div>
@@ -256,7 +256,7 @@ export default function CaseBriefingModal() {
                     <Users className="w-4 h-4" />
                     Suspect Lineup ({c.suspects.length} Persons of Interest)
                   </div>
-                  <span className="text-[11px] font-mono text-red-400 font-bold">
+                  <span className="text-xs font-mono text-red-400 font-bold">
                     Exactly 1 is the Killer
                   </span>
                 </div>
@@ -270,11 +270,11 @@ export default function CaseBriefingModal() {
                       <div className="flex items-center justify-between mb-1">
                         <div className="font-bold text-sm text-zinc-100">
                           {suspect.name}
-                          <span className="text-xs font-normal text-zinc-400 ml-2">
+                          <span className="text-xs font-normal text-zinc-300 ml-2">
                             ({suspect.age}y · {suspect.occupation})
                           </span>
                         </div>
-                        <span className="text-[11px] font-mono text-zinc-400">
+                        <span className="text-xs font-mono text-zinc-300">
                           {suspect.relationshipToVictim}
                         </span>
                       </div>
@@ -293,7 +293,7 @@ export default function CaseBriefingModal() {
                       Total Question Budget: <strong className="text-amber-300">{diffConfig.maxQuestions} Questions</strong>
                     </span>
                   </div>
-                  <span className="text-zinc-400">Shared across all suspects</span>
+                  <span className="text-zinc-300">Shared across all suspects</span>
                 </div>
               </motion.div>
             )}

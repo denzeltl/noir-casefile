@@ -37,7 +37,7 @@ export default function SuspectDossierModal({
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -49,17 +49,17 @@ export default function SuspectDossierModal({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-bold">
+              <span className="text-xs font-mono uppercase tracking-widest text-amber-500 font-bold">
                 Person of Interest File
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
                 {questionsAsked} Qs Asked
               </span>
             </div>
             <h3 className="text-xl font-bold text-zinc-100 truncate">
               {suspect.name}
             </h3>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-zinc-300">
               {suspect.age} years old · {suspect.occupation}
             </p>
           </div>
@@ -70,13 +70,13 @@ export default function SuspectDossierModal({
           {/* Appearance & Relationship */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
-              <div className="text-[11px] font-mono text-zinc-400 uppercase mb-1">
+              <div className="text-xs font-mono text-zinc-300 uppercase mb-1">
                 Appearance
               </div>
               <div className="text-zinc-200">{suspect.appearance}</div>
             </div>
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
-              <div className="text-[11px] font-mono text-zinc-400 uppercase mb-1">
+              <div className="text-xs font-mono text-zinc-300 uppercase mb-1">
                 Relationship to Victim
               </div>
               <div className="text-zinc-200">{suspect.relationshipToVictim}</div>
@@ -86,10 +86,10 @@ export default function SuspectDossierModal({
           {/* Stated Alibi */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold">
+              <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
                 Official Stated Alibi
               </span>
-              <span className="text-[10px] font-mono text-zinc-400">Recorded on record</span>
+              <span className="text-xs font-mono text-zinc-300">Recorded on record</span>
             </div>
             <p className="text-zinc-200 italic font-serif leading-relaxed">
               &quot;{suspect.alibi}&quot;
@@ -98,13 +98,13 @@ export default function SuspectDossierModal({
 
           {/* Questioning Log */}
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-3.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold mb-2">
+            <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold mb-2">
               <MessageCircle className="w-3.5 h-3.5 text-amber-500" />
               Interrogation Transcript ({chatHistory.length} Exchanges)
             </div>
 
             {chatHistory.length === 0 ? (
-              <p className="text-xs text-zinc-400 italic">
+              <p className="text-xs text-zinc-300 italic">
                 No questions have been asked to this suspect yet.
               </p>
             ) : (
@@ -118,7 +118,7 @@ export default function SuspectDossierModal({
                         : "bg-zinc-950 border border-zinc-800 text-zinc-300"
                     }`}
                   >
-                    <span className="font-mono text-[10px] text-zinc-400 block mb-0.5">
+                    <span className="font-mono text-xs text-zinc-300 block mb-0.5">
                       {msg.role === "user" ? "Detective" : suspect.name}:
                     </span>
                     <p className="leading-relaxed">{msg.content}</p>
@@ -133,7 +133,7 @@ export default function SuspectDossierModal({
         <div className="pt-4 border-t border-zinc-800 mt-3 flex items-center justify-between gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="text-xs font-mono text-zinc-400 hover:text-zinc-200 px-3 py-2 cursor-pointer"
+            className="text-xs font-mono text-zinc-300 hover:text-zinc-100 px-3 py-2 cursor-pointer"
           >
             Close File
           </button>

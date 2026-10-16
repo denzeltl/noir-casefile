@@ -28,7 +28,7 @@ export default function ClueDetailModal({
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -38,22 +38,22 @@ export default function ClueDetailModal({
             <Fingerprint className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <span className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold">
+            <span className="text-xs font-mono uppercase tracking-widest text-amber-500 font-bold">
               Evidence Log #{clueIndex + 1}
             </span>
-            <div className="text-xs text-zinc-400 font-mono">Chain of Custody Verified</div>
+            <div className="text-xs text-zinc-300 font-mono">Chain of Custody Verified</div>
           </div>
         </div>
 
         <h3 className="text-xl font-bold text-zinc-100 mb-2">{clue.name}</h3>
 
-        <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg mb-4 w-fit">
+        <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-300 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg mb-4 w-fit">
           <MapPin className="w-3.5 h-3.5 text-amber-500" />
           <span>Location: <strong className="text-zinc-200">{clue.location}</strong></span>
         </div>
 
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 mb-4">
-          <div className="text-xs font-mono uppercase text-zinc-400 mb-1.5">
+          <div className="text-xs font-mono uppercase text-zinc-300 mb-1.5">
             Forensic Description
           </div>
           <p className="text-sm text-zinc-200 leading-relaxed">

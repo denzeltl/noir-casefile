@@ -21,7 +21,7 @@ export default function ClueNotebook({ onInspectClue }: ClueNotebookProps) {
           <Search className="w-3.5 h-3.5" />
           Clue Locker ({c.clues.length})
         </h2>
-        <span className="text-[10px] font-mono text-zinc-400">Click to inspect</span>
+        <span className="text-xs font-mono text-zinc-300">Click to inspect</span>
       </div>
 
       {/* Clues List */}
@@ -44,11 +44,11 @@ export default function ClueNotebook({ onInspectClue }: ClueNotebookProps) {
               <ZoomIn className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-400 transition-colors shrink-0" />
             </div>
 
-            <p className="text-[11px] text-zinc-300 leading-relaxed line-clamp-2 pl-4">
+            <p className="text-xs text-zinc-200 leading-relaxed line-clamp-2 pl-4">
               {clue.description}
             </p>
 
-            <div className="flex items-center gap-1 mt-2 text-[10px] font-mono text-zinc-400 pl-4">
+            <div className="flex items-center gap-1 mt-2 text-xs font-mono text-zinc-300 pl-4">
               <MapPin className="w-3 h-3 text-amber-500" />
               <span className="truncate">{clue.location}</span>
             </div>
@@ -58,7 +58,7 @@ export default function ClueNotebook({ onInspectClue }: ClueNotebookProps) {
 
       {/* Crime Scene Setting */}
       <div className="p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/80">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-amber-500 uppercase tracking-wider mb-1 font-bold">
+        <div className="flex items-center gap-1.5 text-xs font-mono text-amber-500 uppercase tracking-wider mb-1 font-bold">
           <MapPin className="w-3 h-3" />
           Crime Scene
         </div>
@@ -67,15 +67,15 @@ export default function ClueNotebook({ onInspectClue }: ClueNotebookProps) {
 
       {/* Victim Card */}
       <div className="p-3 rounded-xl bg-red-950/20 border border-red-900/40">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-red-400 uppercase tracking-wider mb-1 font-bold">
+        <div className="flex items-center gap-1.5 text-xs font-mono text-red-400 uppercase tracking-wider mb-1 font-bold">
           <Skull className="w-3 h-3" />
           Victim Record
         </div>
         <p className="text-xs text-zinc-100 font-bold">{c.victim.name}</p>
-        <p className="text-[11px] text-zinc-400">
+        <p className="text-xs text-zinc-300">
           Age {c.victim.age} · {c.victim.occupation}
         </p>
-        <p className="text-[11px] text-red-300/90 mt-1 font-mono">
+        <p className="text-xs text-red-300 mt-1 font-mono">
           Cause: {c.victim.causeOfDeath}
         </p>
       </div>

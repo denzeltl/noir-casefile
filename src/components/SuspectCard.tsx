@@ -32,7 +32,7 @@ export default function SuspectCard({ suspect, onOpenDossier }: SuspectCardProps
           className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
             isActive
               ? "bg-amber-950/80 border-amber-600/70 text-amber-300"
-              : "bg-zinc-950 border-zinc-800 text-zinc-500 group-hover:text-zinc-300"
+              : "bg-zinc-950 border-zinc-800 text-zinc-400 group-hover:text-zinc-200"
           }`}
         >
           <User className="w-5 h-5" />
@@ -57,16 +57,16 @@ export default function SuspectCard({ suspect, onOpenDossier }: SuspectCardProps
               </button>
             )}
           </div>
-          <p className="text-xs text-zinc-400 truncate">{suspect.occupation}</p>
-          <p className="text-[11px] text-zinc-400 mt-1 line-clamp-1 italic font-serif">
+          <p className="text-xs text-zinc-300 truncate">{suspect.occupation}</p>
+          <p className="text-xs text-zinc-300 mt-1 line-clamp-1 italic font-serif">
             &quot;{suspect.alibi}&quot;
           </p>
         </div>
       </div>
 
       {/* Relationship & Status Bar */}
-      <div className="mt-3 pt-2.5 border-t border-zinc-800/80 flex items-center justify-between text-[11px] font-mono">
-        <span className="text-zinc-400 truncate max-w-[55%]">
+      <div className="mt-3 pt-2.5 border-t border-zinc-800/80 flex items-center justify-between text-xs font-mono">
+        <span className="text-zinc-300 truncate max-w-[55%]">
           {suspect.relationshipToVictim}
         </span>
         <span className="flex items-center gap-1 shrink-0">
@@ -77,8 +77,8 @@ export default function SuspectCard({ suspect, onOpenDossier }: SuspectCardProps
             </>
           ) : (
             <>
-              <ShieldCheck className="w-3 h-3 text-zinc-400" />
-              <span className="text-zinc-400">Untested</span>
+              <ShieldCheck className="w-3 h-3 text-zinc-300" />
+              <span className="text-zinc-300">Untested</span>
             </>
           )}
         </span>

@@ -45,12 +45,12 @@ export default function CaseHeader() {
                 {c.title}
               </h1>
               <span
-                className={`text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeStyle}`}
+                className={`text-xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeStyle}`}
               >
                 {diffConfig.label}
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-zinc-400 truncate mt-0.5 font-mono">
+            <p className="text-xs text-zinc-300 truncate mt-0.5 font-mono">
               Victim: <span className="text-zinc-300 font-medium">{c.victim.name}</span> ({c.victim.causeOfDeath})
             </p>
           </div>

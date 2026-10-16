@@ -171,14 +171,14 @@ export default function LandingPage() {
                     transition={{ duration: 0.5 }}
                     className="text-center mb-6 sm:mb-8"
                 >
-                    <div className="inline-block border border-amber-800/80 bg-amber-950/40 text-amber-300 font-mono text-[11px] sm:text-xs uppercase tracking-widest px-3 py-1 rounded-full mb-3 sm:mb-4">
+                    <div className="inline-block border border-amber-800/80 bg-amber-950/40 text-amber-300 font-mono text-xs uppercase tracking-widest px-3 py-1 rounded-full mb-3 sm:mb-4">
                         Unsolved Homicide Dossier
                     </div>
 
                     <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-amber-100 leading-[1.08] mb-3 sm:mb-4">
                         SOLVE THE MURDER.
                         <br />
-                        <span className="text-zinc-400 font-serif italic font-normal">
+                        <span className="text-zinc-300 font-serif italic font-normal">
                             Find the crack in the alibi.
                         </span>
                     </h1>
@@ -211,17 +211,17 @@ export default function LandingPage() {
                             </div>
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
+                                    <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-bold">
                                         Investigation in Progress
                                     </span>
-                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 uppercase">
+                                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 uppercase">
                                         {DIFFICULTY_CONFIGS[state.difficulty]?.label || state.difficulty}
                                     </span>
                                 </div>
                                 <h3 className="text-base sm:text-lg font-bold text-zinc-100 truncate mt-0.5">
                                     {state.activeCase.title}
                                 </h3>
-                                <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                                <p className="text-xs text-zinc-300 font-mono mt-0.5">
                                     Victim: <span className="text-zinc-200">{state.activeCase.victim.name}</span> · <span className="text-amber-400 font-bold">{state.questionsRemaining}</span> Qs remaining
                                 </p>
                             </div>
@@ -277,7 +277,7 @@ export default function LandingPage() {
                             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5 transition-all duration-200 hover:-translate-y-1.5 hover:border-amber-600/50 flex flex-col justify-between shadow-lg h-full">
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
-                                        <span className="font-mono text-xl font-black text-amber-500">{item.step}</span>
+                                        <span className="font-mono text-lg font-black text-amber-500">{item.step}</span>
                                         <div className="w-9 h-9 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center shrink-0">
                                             {item.icon}
                                         </div>
@@ -317,7 +317,7 @@ export default function LandingPage() {
                                     <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
                                     <span className="font-mono text-sm font-bold text-zinc-100">Innocent Person</span>
                                 </div>
-                                <span className="text-[11px] sm:text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
                                     Verifiable Alibi
                                 </span>
                             </div>
@@ -333,7 +333,7 @@ export default function LandingPage() {
                                     </span>
                                 </div>
 
-                                <div className="text-zinc-300 text-xs sm:text-sm leading-relaxed space-y-1 pt-1 font-sans">
+                                <div className="text-zinc-200 text-xs sm:text-sm leading-relaxed space-y-1 pt-1 font-sans">
                                     <p>• Statements remain consistent when questioned repeatedly.</p>
                                     <p>• Readily provides specific names, places, and witnesses.</p>
                                     <p>• May express natural grief, surprise, or irritation.</p>
@@ -350,7 +350,7 @@ export default function LandingPage() {
                                     <BadgeAlert className="w-5 h-5 text-red-400 shrink-0" />
                                     <span className="font-mono text-sm font-bold text-zinc-100">The Actual Killer</span>
                                 </div>
-                                <span className="text-[11px] sm:text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">
+                                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">
                                     Flawed Alibi
                                 </span>
                             </div>
@@ -366,7 +366,7 @@ export default function LandingPage() {
                                     </span>
                                 </div>
 
-                                <div className="text-zinc-300 text-xs sm:text-sm leading-relaxed space-y-1 pt-1 font-sans">
+                                <div className="text-zinc-200 text-xs sm:text-sm leading-relaxed space-y-1 pt-1 font-sans">
                                     <p>• Deflects scrutiny toward other suspects.</p>
                                     <p>• Becomes evasive when pressed on physical clues.</p>
                                     <p>• Contains subtle timing cracks that contradict evidence.</p>
@@ -401,7 +401,7 @@ export default function LandingPage() {
                                     <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
                                     {rule.title}
                                 </h3>
-                                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed pl-6 font-sans">
+                                <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed pl-6 font-sans">
                                     {rule.desc}
                                 </p>
                             </div>
@@ -411,10 +411,10 @@ export default function LandingPage() {
             </section>
 
             {/* Footer */}
-            <footer className="py-8 px-4 sm:px-6 text-center text-xs font-mono text-zinc-400 bg-zinc-950">
+            <footer className="py-8 px-4 sm:px-6 text-center text-xs font-mono text-zinc-300 bg-zinc-950">
                 <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div>Noir Casefile — Procedural Murder Mystery Game</div>
-                    <div className="text-zinc-500">
+                    <div className="text-zinc-400">
                         Every case is procedurally generated with full alibi consistency.
                     </div>
                 </div>

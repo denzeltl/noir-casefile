@@ -117,11 +117,11 @@ export default function DifficultySlider({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] sm:text-xs uppercase tracking-widest font-mono text-zinc-400">
+                <span className="text-xs uppercase tracking-widest font-mono text-zinc-300">
                   Case Difficulty
                 </span>
                 <span
-                  className={`text-[10px] sm:text-[11px] font-bold font-mono uppercase px-2 py-0.5 rounded border ${theme.badgeBorder} ${theme.badgeText} ${theme.accentBg}`}
+                  className={`text-xs font-bold font-mono uppercase px-2 py-0.5 rounded border ${theme.badgeBorder} ${theme.badgeText} ${theme.accentBg}`}
                 >
                   Level {currentIndex + 1} of 4
                 </span>
@@ -132,7 +132,7 @@ export default function DifficultySlider({
             </div>
           </div>
 
-          <div className="text-[11px] sm:text-xs text-zinc-300 font-mono bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-lg self-start sm:self-auto">
+          <div className="text-xs text-zinc-300 font-mono bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-lg self-start sm:self-auto">
             <span>Drag slider to adjust</span>
           </div>
         </div>
@@ -191,7 +191,7 @@ export default function DifficultySlider({
                     active ? "text-amber-200 font-bold scale-105" : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
-                  <span className="text-[11px] sm:text-xs block leading-tight whitespace-nowrap">
+                  <span className="text-xs block leading-tight whitespace-nowrap">
                     {cfg.label}
                   </span>
                   <span
@@ -208,7 +208,7 @@ export default function DifficultySlider({
         {/* Dynamic Spec Tiles - Responsive Mobile Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 my-4 sm:my-5">
           <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 sm:p-3.5">
-            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-zinc-400 font-mono mb-1">
+            <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-mono mb-1">
               <UserX className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               Suspects
             </div>
@@ -219,7 +219,7 @@ export default function DifficultySlider({
           </div>
 
           <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 sm:p-3.5">
-            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-zinc-400 font-mono mb-1">
+            <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-mono mb-1">
               <FileSearch className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               Clues
             </div>
@@ -230,7 +230,7 @@ export default function DifficultySlider({
           </div>
 
           <div className="col-span-2 sm:col-span-1 bg-zinc-950 border border-zinc-800 rounded-xl p-3 sm:p-3.5">
-            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-zinc-400 font-mono mb-1">
+            <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-mono mb-1">
               <HelpCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               Question Limit
             </div>
@@ -254,7 +254,7 @@ export default function DifficultySlider({
               <strong className="text-amber-200 font-semibold">Killer Demeanor:</strong>{" "}
               {currentConfig.killerBehavior}
             </p>
-            <p className="text-zinc-300 text-xs leading-relaxed border-t border-zinc-800 pt-2 font-mono">
+            <p className="text-zinc-200 text-xs leading-relaxed border-t border-zinc-800 pt-2 font-mono">
               <strong className="text-zinc-100">Case Complexity:</strong> {currentConfig.extraRules}
             </p>
           </div>
@@ -263,7 +263,7 @@ export default function DifficultySlider({
         {/* Integrated Launch / Resume Button */}
         {onLaunch && (
           <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-            <div className="text-xs font-mono text-zinc-400 text-center sm:text-left">
+            <div className="text-xs font-mono text-zinc-300 text-center sm:text-left">
               Configured with <span className="text-zinc-200 font-bold">{currentConfig.suspectCount} suspects</span> and <span className="text-zinc-200 font-bold">{currentConfig.maxQuestions} questions</span>
             </div>
 

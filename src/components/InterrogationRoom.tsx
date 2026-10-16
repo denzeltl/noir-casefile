@@ -51,13 +51,13 @@ export default function InterrogationRoom({ onOpenDossier }: InterrogationRoomPr
   // No suspect selected state
   if (!suspect) {
     return (
-      <div className="flex-1 flex items-center justify-center text-zinc-500 p-6">
+      <div className="flex-1 flex items-center justify-center text-zinc-400 p-6">
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
-            <ShieldQuestion className="w-8 h-8 text-zinc-600" />
+            <ShieldQuestion className="w-8 h-8 text-zinc-500" />
           </div>
           <h3 className="text-lg font-bold text-zinc-200 mb-1">Interrogation Room Empty</h3>
-          <p className="text-xs sm:text-sm text-zinc-400">
+          <p className="text-xs sm:text-sm text-zinc-300">
             Select a suspect from the lineup to bring them in for questioning.
           </p>
         </div>
@@ -78,11 +78,11 @@ export default function InterrogationRoom({ onOpenDossier }: InterrogationRoomPr
               <h3 className="font-bold text-sm sm:text-base text-zinc-100 truncate">
                 {suspect.name}
               </h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-950 text-zinc-400 border border-zinc-800 hidden sm:inline">
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-950 text-zinc-300 border border-zinc-800 hidden sm:inline">
                 Age {suspect.age}
               </span>
             </div>
-            <p className="text-xs text-zinc-400 truncate">
+            <p className="text-xs text-zinc-300 truncate">
               {suspect.occupation} · {suspect.relationshipToVictim}
             </p>
           </div>
@@ -101,7 +101,7 @@ export default function InterrogationRoom({ onOpenDossier }: InterrogationRoomPr
 
       {/* Stated Alibi Reference Ribbon */}
       <div className="bg-zinc-900/40 border-b border-zinc-800/80 px-4 sm:px-6 py-2.5 text-xs shrink-0 flex items-start gap-2">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold shrink-0 mt-0.5">
+        <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-bold shrink-0 mt-0.5">
           Claimed Alibi:
         </span>
         <p className="text-zinc-300 italic font-serif leading-relaxed line-clamp-2">
@@ -119,13 +119,13 @@ export default function InterrogationRoom({ onOpenDossier }: InterrogationRoomPr
             <h4 className="text-sm font-bold text-zinc-200 mb-1">
               Begin Interrogating {suspect.name}
             </h4>
-            <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+            <p className="text-xs text-zinc-300 leading-relaxed mb-4">
               Ask about their whereabouts, timeline, or connections to physical evidence found at the crime scene.
             </p>
 
             {/* Quick Prompts */}
             <div className="space-y-1.5 text-left">
-              <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold block mb-1">
+              <span className="text-xs font-mono uppercase text-zinc-300 font-bold block mb-1">
                 Suggested Lines of Questioning:
               </span>
               {QUICK_PROMPTS.map((prompt, idx) => (
@@ -156,7 +156,7 @@ export default function InterrogationRoom({ onOpenDossier }: InterrogationRoomPr
                     : "bg-zinc-900 text-zinc-200 border border-zinc-800 rounded-bl-none font-serif"
                 }`}
               >
-                <div className="flex items-center gap-1.5 mb-1 text-[10px] font-mono opacity-60">
+                <div className="flex items-center gap-1.5 mb-1 text-xs font-mono opacity-70">
                   <span>{msg.role === "user" ? "Detective" : suspect.name}</span>
                 </div>
                 {msg.content}
@@ -172,8 +172,8 @@ export default function InterrogationRoom({ onOpenDossier }: InterrogationRoomPr
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-start"
           >
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl rounded-bl-none px-4 py-3 text-xs text-zinc-400 flex items-center gap-2">
-              <span className="font-mono text-[10px] text-zinc-400">{suspect.name} is responding</span>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl rounded-bl-none px-4 py-3 text-xs text-zinc-300 flex items-center gap-2">
+              <span className="font-mono text-xs text-zinc-300">{suspect.name} is responding</span>
               <span className="inline-flex gap-1 text-amber-400">
                 <span className="animate-bounce" style={{ animationDelay: "0ms" }}>•</span>
                 <span className="animate-bounce" style={{ animationDelay: "150ms" }}>•</span>
