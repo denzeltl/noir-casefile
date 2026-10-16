@@ -1,0 +1,220 @@
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+
+// 512x512 Master SVG Vector Icon for Noir Casefile
+const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#18181b" />
+      <stop offset="60%" stop-color="#0c0c0e" />
+      <stop offset="100%" stop-color="#050506" />
+    </radialGradient>
+
+    <!-- Amber Glow & Gold Borders -->
+    <linearGradient id="amberGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="50%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+
+    <!-- Hatband Gradient -->
+    <linearGradient id="hatBandGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+
+    <!-- Glass Lens Radial Glow -->
+    <radialGradient id="lensGrad" cx="42%" cy="40%" r="58%">
+      <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.35" />
+      <stop offset="50%" stop-color="#f59e0b" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#78350f" stop-opacity="0.4" />
+    </radialGradient>
+
+    <!-- Crimson Evidence Tag -->
+    <linearGradient id="crimsonTag" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.8" />
+    </filter>
+  </defs>
+
+  <!-- Base Squircle -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#bgGrad)" stroke="url(#amberGold)" stroke-width="6" stroke-opacity="0.85" />
+
+  <!-- Subtle Inner Vignette Ring -->
+  <rect x="28" y="28" width="456" height="456" rx="100" fill="none" stroke="#27272a" stroke-width="2" stroke-dasharray="8 6" stroke-opacity="0.6" />
+
+  <!-- Venetian Blind Atmosphere Lines (Noir motif) -->
+  <g opacity="0.07" stroke="#ffffff" stroke-width="14">
+    <line x1="40" y1="90" x2="472" y2="90" />
+    <line x1="40" y1="140" x2="472" y2="140" />
+    <line x1="40" y1="190" x2="472" y2="190" />
+    <line x1="40" y1="240" x2="472" y2="240" />
+    <line x1="40" y1="290" x2="472" y2="290" />
+    <line x1="40" y1="340" x2="472" y2="340" />
+    <line x1="40" y1="390" x2="472" y2="390" />
+    <line x1="40" y1="440" x2="472" y2="440" />
+  </g>
+
+  <!-- Detective Silhouette Group with Filter Shadow -->
+  <g filter="url(#shadow)">
+    <!-- Trenchcoat Collar & Shoulders -->
+    <path d="M120 440 C140 370 180 340 215 330 L256 370 L297 330 C332 340 372 370 392 440 Z" fill="#18181b" stroke="#27272a" stroke-width="3" />
+    
+    <!-- Coat Lapels -->
+    <path d="M215 330 L256 420 L220 440 Z" fill="#09090b" />
+    <path d="M297 330 L256 420 L292 440 Z" fill="#09090b" />
+    <line x1="256" y1="370" x2="256" y2="440" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.5" />
+
+    <!-- Detective Fedora Crown -->
+    <!-- Tilted crown crease with pinched front -->
+    <path d="M185 240 C180 200 190 150 225 135 C240 145 256 148 272 145 C288 142 305 135 320 148 C335 160 340 200 330 240 Z" fill="#121214" stroke="#27272a" stroke-width="2" />
+    <!-- Crown Dent Shadow -->
+    <path d="M225 140 C245 156 270 156 295 145 C280 170 240 170 225 140 Z" fill="#050506" />
+
+    <!-- Fedora Amber Hatband -->
+    <path d="M184 232 C220 242 292 242 328 232 L330 242 C292 254 220 254 182 242 Z" fill="url(#hatBandGrad)" />
+
+    <!-- Fedora Wide Brim -->
+    <path d="M130 245 C150 235 200 238 256 238 C312 238 362 235 382 245 C400 255 365 264 256 264 C147 264 112 255 130 245 Z" fill="#18181b" stroke="#3f3f46" stroke-width="2" />
+    
+    <!-- Face in Shadow / Mystery Eyes -->
+    <ellipse cx="256" cy="285" rx="36" ry="42" fill="#09090b" />
+  </g>
+
+  <!-- Foreground: Amber Crime Magnifying Glass Focus -->
+  <g filter="url(#glow)">
+    <!-- Magnifying Glass Handle -->
+    <line x1="330" y1="330" x2="415" y2="415" stroke="url(#amberGold)" stroke-width="20" stroke-linecap="round" />
+    <line x1="330" y1="330" x2="415" y2="415" stroke="#78350f" stroke-width="8" stroke-linecap="round" />
+    <circle cx="415" cy="415" r="14" fill="url(#amberGold)" />
+
+    <!-- Lens Rim -->
+    <circle cx="280" cy="280" r="92" fill="url(#lensGrad)" stroke="url(#amberGold)" stroke-width="12" />
+    <circle cx="280" cy="280" r="92" fill="none" stroke="#fef3c7" stroke-width="2" stroke-opacity="0.6" />
+
+    <!-- Lens Specular Glint Highlight -->
+    <path d="M220 250 A76 76 0 0 1 290 205" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-opacity="0.6" />
+
+    <!-- Inside the Glass: Golden Fingerprint / Crime Clue Traces -->
+    <g opacity="0.85" stroke="#f59e0b" stroke-width="3.5" fill="none" stroke-linecap="round">
+      <path d="M280 262 C274 262 270 266 270 272 C270 282 290 282 290 292 C290 298 284 302 278 302" />
+      <path d="M262 270 C262 258 270 252 280 252 C292 252 298 260 298 270 C298 286 268 288 268 304 C268 312 274 316 282 316" />
+      <path d="M254 280 C254 262 265 242 280 242 C298 242 308 260 308 280 C308 298 300 315 284 324" />
+      <circle cx="280" cy="280" r="4" fill="#fbbf24" stroke="none" />
+    </g>
+  </g>
+
+  <!-- Evidence Classified Stamp Tag (Top Right) -->
+  <g transform="translate(330, 48) rotate(12)">
+    <rect x="0" y="0" width="105" height="34" rx="6" fill="#7f1d1d" fill-opacity="0.75" stroke="#dc2626" stroke-width="2.5" />
+    <text x="52" y="22" font-family="'Courier New', monospace" font-size="14" font-weight="900" fill="#fecaca" text-anchor="middle" letter-spacing="3">CASEFILE</text>
+  </g>
+</svg>`;
+
+// Helper to encode a collection of PNG buffers into an ICO file
+function createIco(pngBuffers) {
+  const count = pngBuffers.length;
+  const headerSize = 6;
+  const dirEntrySize = 16;
+  const dirSize = count * dirEntrySize;
+  
+  let currentOffset = headerSize + dirSize;
+  const header = Buffer.alloc(headerSize);
+  header.writeUInt16LE(0, 0); // reserved
+  header.writeUInt16LE(1, 2); // ICO type
+  header.writeUInt16LE(count, 4); // number of images
+
+  const dirEntries = [];
+  for (const { buffer, size } of pngBuffers) {
+    const entry = Buffer.alloc(dirEntrySize);
+    entry.writeUInt8(size >= 256 ? 0 : size, 0); // width
+    entry.writeUInt8(size >= 256 ? 0 : size, 1); // height
+    entry.writeUInt8(0, 2); // color palette
+    entry.writeUInt8(0, 3); // reserved
+    entry.writeUInt16LE(1, 4); // color planes
+    entry.writeUInt16LE(32, 6); // bits per pixel
+    entry.writeUInt32LE(buffer.length, 8); // image size in bytes
+    entry.writeUInt32LE(currentOffset, 12); // image offset in file
+    dirEntries.push(entry);
+    currentOffset += buffer.length;
+  }
+
+  return Buffer.concat([header, ...dirEntries, ...pngBuffers.map(p => p.buffer)]);
+}
+
+async function generateAll() {
+  console.log('Generating vector icons and image assets for Noir Casefile...');
+
+  const rootDir = path.resolve(__dirname, '..');
+  const publicDir = path.join(rootDir, 'public');
+  const appDir = path.join(rootDir, 'src', 'app');
+
+  if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
+
+  // 1. Write Master SVG Icon
+  fs.writeFileSync(path.join(publicDir, 'favicon.svg'), svgIcon, 'utf8');
+  fs.writeFileSync(path.join(appDir, 'icon.svg'), svgIcon, 'utf8');
+  console.log('✓ Created public/favicon.svg & src/app/icon.svg');
+
+  // 2. Generate PNG sizes using Sharp
+  const svgBuffer = Buffer.from(svgIcon);
+
+  const pngSizes = [
+    { size: 16, dest: null },
+    { size: 32, dest: path.join(publicDir, 'favicon-32x32.png') },
+    { size: 48, dest: null },
+    { size: 180, dest: path.join(publicDir, 'apple-touch-icon.png') },
+    { size: 180, destApp: path.join(appDir, 'apple-icon.png') },
+    { size: 192, dest: path.join(publicDir, 'icon-192.png') },
+    { size: 512, dest: path.join(publicDir, 'icon-512.png') },
+    { size: 512, destMaskable: path.join(publicDir, 'icon-maskable-512.png') }
+  ];
+
+  const icoList = [];
+
+  for (const item of pngSizes) {
+    const pngBuffer = await sharp(svgBuffer)
+      .resize(item.size, item.size)
+      .png()
+      .toBuffer();
+
+    if (item.dest) {
+      fs.writeFileSync(item.dest, pngBuffer);
+      console.log(`✓ Created ${path.relative(rootDir, item.dest)} (${item.size}x${item.size})`);
+    }
+    if (item.destApp) {
+      fs.writeFileSync(item.destApp, pngBuffer);
+      console.log(`✓ Created ${path.relative(rootDir, item.destApp)} (${item.size}x${item.size})`);
+    }
+
+    if ([16, 32, 48].includes(item.size)) {
+      icoList.push({ size: item.size, buffer: pngBuffer });
+    }
+  }
+
+  // 3. Generate multi-resolution ICO file (16, 32, 48)
+  const icoBuffer = createIco(icoList);
+  fs.writeFileSync(path.join(publicDir, 'favicon.ico'), icoBuffer);
+  fs.writeFileSync(path.join(appDir, 'favicon.ico'), icoBuffer);
+  console.log('✓ Created multi-resolution public/favicon.ico & src/app/favicon.ico');
+
+  console.log('Asset generation completed successfully.');
+}
+
+generateAll().catch(err => {
+  console.error('Asset generation failed:', err);
+  process.exit(1);
+});
