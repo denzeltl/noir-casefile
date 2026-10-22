@@ -27,39 +27,39 @@ export default function SuspectDossierModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 backdrop-blur-sm p-4 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ duration: 0.2 }}
-        className="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative my-auto max-h-[90vh] flex flex-col"
+        className="bg-paper border border-rule-strong rounded-lg max-w-lg w-full p-5 sm:p-6 shadow-2xl relative my-auto max-h-[90vh] flex flex-col"
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 btn text-muted hover:text-ink p-1 rounded-lg hover:bg-rule cursor-pointer"
         >
-          <X className="w-5 h-5" />
+          <X className="spin w-5 h-5" />
         </button>
 
         {/* Dossier Header */}
-        <div className="flex items-center gap-3.5 mb-4 pb-4 border-b border-zinc-800">
-          <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
-            <User className="w-7 h-7 text-amber-400" />
+        <div className="flex items-center gap-3.5 mb-4 pb-4 border-b border-rule-strong">
+          <div className="w-14 h-14 rounded-md bg-sheet border border-rule-strong flex items-center justify-center shrink-0">
+            <User className="w-7 h-7 text-ink" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono uppercase tracking-widest text-amber-500 font-bold">
+              <span className="text-xs font-mono uppercase tracking-widest text-ink font-bold">
                 Person of Interest File
               </span>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-sheet text-muted border border-rule-strong">
                 {questionsAsked} Qs Asked
               </span>
             </div>
-            <h3 className="text-xl font-bold text-zinc-100 truncate">
+            <h3 className="text-xl font-bold text-ink truncate">
               {suspect.name}
             </h3>
-            <p className="text-xs text-zinc-300">
+            <p className="text-xs text-muted">
               {suspect.age} years old · {suspect.occupation}
             </p>
           </div>
@@ -69,42 +69,42 @@ export default function SuspectDossierModal({
         <div className="space-y-3.5 overflow-y-auto flex-1 pr-1 text-xs sm:text-sm">
           {/* Appearance & Relationship */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
-              <div className="text-xs font-mono text-zinc-300 uppercase mb-1">
+            <div className="bg-sheet border border-rule-strong rounded-md p-3">
+              <div className="text-xs font-mono text-muted uppercase mb-1">
                 Appearance
               </div>
-              <div className="text-zinc-200">{suspect.appearance}</div>
+              <div className="text-ink">{suspect.appearance}</div>
             </div>
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
-              <div className="text-xs font-mono text-zinc-300 uppercase mb-1">
+            <div className="bg-sheet border border-rule-strong rounded-md p-3">
+              <div className="text-xs font-mono text-muted uppercase mb-1">
                 Relationship to Victim
               </div>
-              <div className="text-zinc-200">{suspect.relationshipToVictim}</div>
+              <div className="text-ink">{suspect.relationshipToVictim}</div>
             </div>
           </div>
 
           {/* Stated Alibi */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5">
+          <div className="bg-sheet border border-rule-strong rounded-md p-3.5">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
+              <span className="text-xs font-mono uppercase tracking-wider text-ink font-bold">
                 Official Stated Alibi
               </span>
-              <span className="text-xs font-mono text-zinc-300">Recorded on record</span>
+              <span className="text-xs font-mono text-muted">Recorded on record</span>
             </div>
-            <p className="text-zinc-200 italic font-serif leading-relaxed">
+            <p className="text-ink italic font-serif leading-relaxed">
               &quot;{suspect.alibi}&quot;
             </p>
           </div>
 
           {/* Questioning Log */}
-          <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-3.5">
-            <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold mb-2">
-              <MessageCircle className="w-3.5 h-3.5 text-amber-500" />
+          <div className="bg-sheet border border-rule-strong rounded-md p-3.5">
+            <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-muted font-bold mb-2">
+              <MessageCircle className="w-3.5 h-3.5 text-ink" />
               Interrogation Transcript ({chatHistory.length} Exchanges)
             </div>
 
             {chatHistory.length === 0 ? (
-              <p className="text-xs text-zinc-300 italic">
+              <p className="text-xs text-muted italic">
                 No questions have been asked to this suspect yet.
               </p>
             ) : (
@@ -114,11 +114,11 @@ export default function SuspectDossierModal({
                     key={i}
                     className={`p-2.5 rounded-lg ${
                       msg.role === "user"
-                        ? "bg-amber-950/40 border border-amber-800/40 text-amber-100"
-                        : "bg-zinc-950 border border-zinc-800 text-zinc-300"
+                        ? "bg-hl-peach/40 border border-rule-strong text-ink"
+                        : "bg-paper border border-rule-strong text-muted"
                     }`}
                   >
-                    <span className="font-mono text-xs text-zinc-300 block mb-0.5">
+                    <span className="font-mono text-xs text-muted block mb-0.5">
                       {msg.role === "user" ? "Detective" : suspect.name}:
                     </span>
                     <p className="leading-relaxed">{msg.content}</p>
@@ -130,17 +130,17 @@ export default function SuspectDossierModal({
         </div>
 
         {/* Action Button */}
-        <div className="pt-4 border-t border-zinc-800 mt-3 flex items-center justify-between gap-3 shrink-0">
+        <div className="pt-4 border-t border-rule-strong mt-3 flex items-center justify-between gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="text-xs font-mono text-zinc-300 hover:text-zinc-100 px-3 py-2 cursor-pointer"
+            className="btn text-xs font-mono text-muted hover:text-ink px-3 py-2 cursor-pointer"
           >
             Close File
           </button>
 
           <button
             onClick={handleSelectAndQuestion}
-            className="bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-mono text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
+            className="btn btn-ink font-mono text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-md transition-all shadow-md flex items-center gap-2 cursor-pointer"
           >
             <MessageCircle className="w-4 h-4" />
             Interrogate {suspect.name.split(" ")[0]}

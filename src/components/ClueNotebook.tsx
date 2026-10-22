@@ -1,84 +1,95 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useGame } from "@/context/GameContext";
-import { Search, Fingerprint, MapPin, ZoomIn, Skull } from "lucide-react";
+import { useMarks } from "@/context/MarksContext";
 import type { Clue } from "@/types/case";
 
 interface ClueNotebookProps {
   onInspectClue?: (clue: Clue, index: number) => void;
 }
 
+/**
+ * The evidence beside the transcript. When the player marks an answer as
+ * contradicting a clue, that clue's card pulls forward (the signature) and
+ * keeps a red edge with the names of who it catches.
+ */
 export default function ClueNotebook({ onInspectClue }: ClueNotebookProps) {
   const { state } = useGame();
+  const { marks, pulledClueId } = useMarks();
+  const refs = useRef<Record<string, HTMLLIElement | null>>({});
   const c = state.activeCase;
+
+  useEffect(() => {
+    if (pulledClueId) refs.current[pulledClueId]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [pulledClueId]);
+
   if (!c) return null;
 
+  const citedBy = (clueId: string) => {
+    const ids = new Set(
+      Object.entries(marks)
+        .filter(([, m]) => m.tone === "red" && m.clueId === clueId)
+        .map(([k]) => k.split(":")[0]),
+    );
+    return c.suspects.filter((s) => ids.has(s.id)).map((s) => s.name);
+  };
+
   return (
-    <aside className="border-l border-zinc-800 bg-zinc-950/70 p-4 sm:p-5 w-full flex flex-col gap-4 text-xs">
-      {/* Section Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-        <h2 className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider font-mono">
-          <Search className="w-3.5 h-3.5" />
-          Clue Locker ({c.clues.length})
-        </h2>
-        <span className="text-xs font-mono text-zinc-300">Click to inspect</span>
+    <aside className="flex w-full flex-col gap-5 p-4 sm:p-5" aria-label="Evidence">
+      <div className="flex items-baseline justify-between gap-2 border-b border-rule-strong pb-2">
+        <h2 className="label !text-ink">Evidence · {c.clues.length} clues</h2>
+        <span className="label">Tap to inspect</span>
       </div>
 
-      {/* Clues List */}
-      <div className="space-y-2.5">
-        {c.clues.map((clue, i) => (
-          <div
-            key={clue.id}
-            onClick={() => onInspectClue?.(clue, i)}
-            className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 hover:border-amber-600/70 hover:bg-zinc-900 transition-all cursor-pointer group relative shadow-sm"
-          >
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="font-mono text-xs font-black text-amber-400">
-                  #{i + 1}
-                </span>
-                <span className="font-bold text-xs text-zinc-200 group-hover:text-amber-100 truncate">
-                  {clue.name}
-                </span>
-              </div>
-              <ZoomIn className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-400 transition-colors shrink-0" />
-            </div>
+      <ul className="space-y-2.5">
+        {c.clues.map((clue, i) => {
+          const pulled = pulledClueId === clue.id;
+          const names = citedBy(clue.id);
+          return (
+            <li
+              key={clue.id}
+              ref={(el) => { refs.current[clue.id] = el; }}
+              className="transition-transform duration-300 ease-[var(--ease-out)]"
+              style={{ transform: pulled ? "translateX(-12px) rotate(-1deg)" : "none" }}
+            >
+              <button
+                type="button"
+                onClick={() => onInspectClue?.(clue, i)}
+                className={`card-lift block w-full cursor-pointer border border-l-4 bg-sheet p-3 text-left hover:border-muted ${
+                  names.length ? "border-l-hl-red" : "border-l-rule-strong"
+                } ${pulled ? "border-pen shadow-[0_18px_30px_-16px_rgba(163,39,27,.55)]" : "border-rule-strong"}`}
+              >
+                <span className="label">Clue {String(i + 1).padStart(2, "0")} · {clue.location}</span>
+                <span className="mt-1 block text-[17px] leading-snug [overflow-wrap:anywhere]">{clue.name}</span>
+                <span className="mt-1 line-clamp-2 block text-[15px] leading-snug text-muted">{clue.description}</span>
+                {names.length > 0 && (
+                  <span className="mt-2 block font-mono text-[12px] leading-snug text-pen [overflow-wrap:anywhere]">
+                    ✗ Breaks what {names.join(", ")} said
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
 
-            <p className="text-xs text-zinc-200 leading-relaxed line-clamp-2 pl-4">
-              {clue.description}
-            </p>
+      <section className="border-t border-rule-strong pt-4">
+        <h3 className="label">Scene</h3>
+        <p className="mt-1 text-[15px] leading-snug [overflow-wrap:anywhere]">{c.setting}</p>
+      </section>
 
-            <div className="flex items-center gap-1 mt-2 text-xs font-mono text-zinc-300 pl-4">
-              <MapPin className="w-3 h-3 text-amber-500" />
-              <span className="truncate">{clue.location}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Crime Scene Setting */}
-      <div className="p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/80">
-        <div className="flex items-center gap-1.5 text-xs font-mono text-amber-500 uppercase tracking-wider mb-1 font-bold">
-          <MapPin className="w-3 h-3" />
-          Crime Scene
-        </div>
-        <p className="text-xs text-zinc-300 leading-relaxed">{c.setting}</p>
-      </div>
-
-      {/* Victim Card */}
-      <div className="p-3 rounded-xl bg-red-950/20 border border-red-900/40">
-        <div className="flex items-center gap-1.5 text-xs font-mono text-red-400 uppercase tracking-wider mb-1 font-bold">
-          <Skull className="w-3 h-3" />
-          Victim Record
-        </div>
-        <p className="text-xs text-zinc-100 font-bold">{c.victim.name}</p>
-        <p className="text-xs text-zinc-300">
+      <section className="border-t border-rule-strong pt-4">
+        <h3 className="label">Victim</h3>
+        <p className="mt-1 text-[17px] leading-tight [overflow-wrap:anywhere]">{c.victim.name}</p>
+        <p className="text-[15px] text-muted [overflow-wrap:anywhere]">
           Age {c.victim.age} · {c.victim.occupation}
         </p>
-        <p className="text-xs text-red-300 mt-1 font-mono">
-          Cause: {c.victim.causeOfDeath}
+        <p className="mt-1 text-[15px] [overflow-wrap:anywhere]">
+          <span className="label mr-2">Cause</span>
+          {c.victim.causeOfDeath}
         </p>
-      </div>
+      </section>
     </aside>
   );
 }

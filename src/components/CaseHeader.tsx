@@ -1,16 +1,10 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useGame } from "@/context/GameContext";
-import { Skull, MessageCircle, Gavel, FileText, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Gavel } from "lucide-react";
 import { DIFFICULTY_CONFIGS } from "@/types/case";
 import { useRouter } from "next/navigation";
-
-const difficultyBadgeStyles = {
-  easy: "text-emerald-400 bg-emerald-950/60 border-emerald-800/60",
-  medium: "text-amber-400 bg-amber-950/60 border-amber-800/60",
-  hard: "text-orange-400 bg-orange-950/60 border-orange-800/60",
-  noir: "text-purple-400 bg-purple-950/60 border-purple-800/60",
-};
 
 export default function CaseHeader() {
   const { state, dispatch } = useGame();
@@ -18,79 +12,77 @@ export default function CaseHeader() {
   const c = state.activeCase;
   if (!c) return null;
 
-  const diffConfig = DIFFICULTY_CONFIGS[state.difficulty] || DIFFICULTY_CONFIGS.medium;
-  const badgeStyle = difficultyBadgeStyles[state.difficulty] || difficultyBadgeStyles.medium;
-  const isLowOnQuestions = state.questionsRemaining <= 3;
+  const cfg = DIFFICULTY_CONFIGS[state.difficulty] || DIFFICULTY_CONFIGS.medium;
+  const left = state.questionsRemaining;
+  const low = left <= 2;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3 transition-colors">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
-        {/* Title, Back & Victim Info */}
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+    <header className="z-30 shrink-0 border-b border-rule-strong bg-desk px-3 py-2.5 sm:px-6">
+      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-[1_1_16rem] items-center gap-2.5">
           <button
+            type="button"
             onClick={() => router.push("/")}
-            title="Return to Case Archives"
-            className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-colors shrink-0 cursor-pointer"
+            aria-label="Back to the front page"
+            title="Back to the front page"
+            className="btn btn-quiet flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted hover:text-ink"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="nudge-left h-4 w-4" aria-hidden="true" />
           </button>
-
-          <div className="w-8 h-8 rounded-lg bg-red-950 border border-red-800/80 flex items-center justify-center shrink-0">
-            <Skull className="w-4 h-4 text-red-500" />
-          </div>
-
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-sm sm:text-base font-bold text-zinc-100 truncate max-w-[220px] sm:max-w-md">
-                {c.title}
-              </h1>
-              <span
-                className={`text-xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeStyle}`}
-              >
-                {diffConfig.label}
-              </span>
-            </div>
-            <p className="text-xs text-zinc-300 truncate mt-0.5 font-mono">
-              Victim: <span className="text-zinc-300 font-medium">{c.victim.name}</span> ({c.victim.causeOfDeath})
-            </p>
+            <p className="label truncate">{cfg.label} · Victim: {c.victim.name}</p>
+            <h1 className="truncate text-[20px] leading-tight sm:text-[22px]" title={c.title}>{c.title}</h1>
           </div>
         </div>
 
-        {/* Actions & Question Budget */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Re-open Case Briefing Dossier */}
-          <button
-            onClick={() => dispatch({ type: "SHOW_BRIEFING", payload: true })}
-            className="flex items-center gap-1.5 text-xs font-mono text-amber-300 bg-amber-950/40 hover:bg-amber-900/40 border border-amber-800/60 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-          >
-            <FileText className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Case</span> Dossier
-          </button>
-
-          {/* Question Limit Badge */}
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 max-sm:w-full max-sm:justify-between sm:gap-3">
+          {/* Question budget: one box per question, inked while unspent. */}
           <div
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-all ${
-              isLowOnQuestions
-                ? "bg-red-950/60 border-red-700/80 text-red-300 animate-pulse"
-                : "bg-zinc-900 border-zinc-800 text-zinc-300"
-            }`}
+            className="flex items-center gap-2"
+            role="status"
+            aria-label={`${left} of ${cfg.maxQuestions} questions left`}
           >
-            <MessageCircle className={`w-3.5 h-3.5 ${isLowOnQuestions ? "text-red-400" : "text-amber-500"}`} />
-            <span>
-              <strong className={isLowOnQuestions ? "text-red-200 font-bold" : "text-zinc-100 font-bold"}>
-                {state.questionsRemaining}
-              </strong>{" "}
-              <span className="hidden sm:inline">Qs Left</span>
+            <span className="hidden gap-[3px] md:flex" aria-hidden="true">
+              {Array.from({ length: cfg.maxQuestions }).map((_, i) => (
+                <i key={i} className={`relative block h-4 w-2.5 border ${low ? "border-pen" : "border-ink/70"}`}>
+                  <i
+                    className={`absolute inset-[2px] origin-bottom transition-transform duration-200 ease-[var(--ease-out)] ${low ? "bg-pen" : "bg-ink"}`}
+                    style={{ transform: i < left ? "scaleY(1)" : "scaleY(0)" }}
+                  />
+                </i>
+              ))}
+            </span>
+            <span className={`font-mono text-[13px] uppercase tabular-nums ${low ? "text-pen" : ""}`}>
+              <motion.strong
+                key={left}
+                className="inline-block text-[16px] font-semibold"
+                initial={{ transform: "scale(1.3)", opacity: 0.5 }}
+                animate={{ transform: "scale(1)", opacity: 1 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+              >
+                {left}
+              </motion.strong>{" "}
+              left
             </span>
           </div>
 
-          {/* Accuse / Indict Button */}
           <button
-            onClick={() => dispatch({ type: "SHOW_ACCUSATION", payload: true })}
-            className="flex items-center gap-1.5 bg-red-700 hover:bg-red-600 active:scale-95 text-white text-xs sm:text-sm font-mono font-bold uppercase tracking-wider px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all shadow-md cursor-pointer"
+            type="button"
+            onClick={() => dispatch({ type: "SHOW_BRIEFING", payload: true })}
+            title="Case file"
+            className="btn btn-quiet min-h-11 max-w-[12rem] cursor-pointer truncate rounded-md px-3 font-mono text-[12px] uppercase"
           >
-            <Gavel className="w-3.5 h-3.5 text-red-200" />
-            <span>Accuse</span>
+            Case file
+          </button>
+
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "SHOW_ACCUSATION", payload: true })}
+            title="Accuse"
+            className="btn btn-pen inline-flex min-h-11 max-w-[12rem] cursor-pointer items-center gap-1.5 rounded-md px-3.5 font-mono text-[12px] font-semibold uppercase sm:px-4"
+          >
+            <Gavel className="tilt h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">Accuse</span>
           </button>
         </div>
       </div>
