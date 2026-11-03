@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import groq from "@/lib/groq";
+import { saveCase } from "@/lib/db";
 import {
   CaseSchema,
   DifficultySchema,
@@ -105,6 +106,9 @@ ${config.extraRules}`;
         { status: 502 }
       );
     }
+
+    // Fire-and-forget: persistence is for the admin Ad Studio, never blocks the player.
+    after(() => saveCase(result.data, difficulty));
 
     return NextResponse.json(result.data);
   } catch (error) {
