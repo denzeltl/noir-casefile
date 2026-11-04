@@ -1,33 +1,37 @@
 import { NextResponse, after } from "next/server";
 import { getDb } from "@/lib/db";
-import { HookDecisionSchema } from "@/lib/ads/schemas";
-import { isWaitingForHook, resumeRun } from "@/lib/ads/runner";
+import { HookDecisionSchema, RenderResultSchema } from "@/lib/ads/schemas";
+import { pausedAt, resumeRun } from "@/lib/ads/runner";
 
 /**
- * POST /api/ads/runs/[id]/resume
- *   { action: "choose", hookId } | { action: "edit", hookId, hook, script } | { action: "rewrite", note }
- * Answers interrupt #1. Auth: admin cookie or x-n8n-secret, enforced in src/proxy.ts.
+ * POST /api/ads/runs/[id]/resume — answers whichever interrupt the run is paused at.
+ *   pick_hook (admin):  { action: "choose", hookId } | { action: "edit", hookId, hook, script } | { action: "rewrite", note }
+ *   render (worker):    { action: "rendered", videoUrl }
+ * Auth: admin cookie or x-n8n-secret, enforced in src/proxy.ts.
  */
 export async function POST(request: Request, ctx: RouteContext<"/api/ads/runs/[id]/resume">) {
   const { id } = await ctx.params;
   const db = getDb();
   if (!db) return NextResponse.json({ error: "No database connected." }, { status: 503 });
 
-  const parsed = HookDecisionSchema.safeParse(await request.json().catch(() => null));
+  const node = await pausedAt(id).catch(() => null);
+  if (!node) return NextResponse.json({ error: "This run isn't waiting for an answer." }, { status: 409 });
+
+  const body = await request.json().catch(() => null);
+  const parsed = node === "pickHook" ? HookDecisionSchema.safeParse(body) : RenderResultSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Choose a hook, edit one, or send a rewrite note." }, { status: 400 });
+    const want = node === "pickHook" ? "Choose a hook, edit one, or send a rewrite note." : "Send { action: \"rendered\", videoUrl }.";
+    return NextResponse.json({ error: want }, { status: 400 });
   }
 
-  if (!(await isWaitingForHook(id).catch(() => false))) {
-    return NextResponse.json({ error: "This run isn't waiting for a hook." }, { status: 409 });
-  }
-
-  // Claim the pause: only one decision wins a double submit.
+  // Claim the pause: only one answer wins a double submit. A render result
+  // must come from the worker that claimed the run (status = rendering).
+  const from = node === "pickHook" ? "waiting_hook" : "rendering";
   const { data: claimed, error } = await db
     .from("ad_runs")
     .update({ status: "running", updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("status", "waiting_hook")
+    .eq("status", from)
     .select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!claimed?.length) {

@@ -8,12 +8,17 @@ import { PASS_SCORE, type HookDecision } from "@/lib/ads/schemas";
 const STAMP: Record<string, { label: string; className: string }> = {
   waiting_hook: { label: "Needs you", className: "border-pen text-pen" },
   running: { label: "Running", className: "border-muted text-muted" },
+  waiting_render: { label: "Queued", className: "border-muted text-muted" },
+  rendering: { label: "Rendering", className: "border-muted text-muted" },
+  render_failed: { label: "Render failed", className: "border-pen text-pen" },
+  waiting_video: { label: "Needs you", className: "border-pen text-pen" },
   failed: { label: "Failed", className: "border-pen text-pen" },
   ready_to_post: { label: "Ready", className: "border-success-ink text-success-ink" },
 };
 
-// The graph runs in the background; while it does, re-read the run every few seconds.
+// The graph and the render worker run in the background; while they do, re-read the run.
 const POLL_MS = 4000;
+const BUSY = ["running", "waiting_render", "rendering"];
 
 type Notice = { tone: "ok" | "error"; text: string } | null;
 
@@ -22,7 +27,7 @@ export default function RunDesk({ run }: { run: AdminRun }) {
   const waiting = run.status === "waiting_hook" && run.hooks.length > 0;
 
   useEffect(() => {
-    if (run.status !== "running") return;
+    if (!BUSY.includes(run.status)) return;
     const t = setInterval(() => router.refresh(), POLL_MS);
     return () => clearInterval(t);
   }, [run.status, router]);
@@ -68,9 +73,39 @@ export default function RunDesk({ run }: { run: AdminRun }) {
           <StatusSheet label="The run failed" tone="error">
             {run.error ?? "No error was recorded."} Start a new ad for this case from the register.
           </StatusSheet>
+        ) : run.status === "render_failed" ? (
+          <RenderFailed run={run} />
+        ) : run.status === "waiting_render" || run.status === "rendering" ? (
+          <StatusSheet label={run.status === "rendering" ? "Rendering the trailer" : "Waiting for the render worker"}>
+            {run.status === "rendering"
+              ? "Your PC is rendering the 15-second trailer. This usually takes under a minute."
+              : run.workerOnline
+                ? "The storyboard is written. The render worker will pick it up within seconds."
+                : "The storyboard is written. The render worker is offline; start it with npm run render-worker and it will render this run."}
+            <WorkerStatus online={run.workerOnline} lastSeen={run.workerLastSeen} />
+          </StatusSheet>
+        ) : run.status === "waiting_video" && run.videoUrl ? (
+          <div className="sheet pane-in grid gap-6 px-6 py-6 sm:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
+            <video
+              src={run.videoUrl}
+              controls
+              playsInline
+              preload="metadata"
+              className="aspect-[9/16] w-full max-w-[280px] rounded-sm bg-ink"
+            />
+            <div className="min-w-0">
+              <p className="label">Trailer rendered</p>
+              <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed">
+                Watch it through. Approving, re-rendering or discarding it happens here once the review step is wired up.
+              </p>
+              <a href={run.videoUrl} download className="link-draw label mt-4 inline-flex min-h-11 items-center text-ink">
+                Download MP4
+              </a>
+            </div>
+          </div>
         ) : run.status === "running" && run.chosenHook ? (
-          <StatusSheet label="Hook filed">
-            “{run.chosenHook.hook}” is locked in. The storyboard step comes next.
+          <StatusSheet label="Writing the storyboard">
+            “{run.chosenHook.hook}” is locked in. The storyboard is being written; the render worker takes it from there.
           </StatusSheet>
         ) : run.status === "running" ? (
           <StatusSheet label="Writing hooks">
@@ -84,11 +119,64 @@ export default function RunDesk({ run }: { run: AdminRun }) {
   );
 }
 
+function WorkerStatus({ online, lastSeen }: { online: boolean; lastSeen: string | null }) {
+  return (
+    <span className="label mt-4 flex items-center gap-2">
+      <span aria-hidden className={`size-2 rounded-full ${online ? "bg-success-ink" : "bg-pen"}`} />
+      {online ? "Worker online" : lastSeen ? `Worker offline · last seen ${new Date(lastSeen).toLocaleString()}` : "Worker has never checked in"}
+    </span>
+  );
+}
+
+function RenderFailed({ run }: { run: AdminRun }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function retry() {
+    setPending(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/ads/runs/${run.id}/retry-render`, { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotice(body.error ?? `The studio answered ${res.status}.`);
+        setPending(false);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setNotice("Couldn't reach the server. Check your connection and try again.");
+      setPending(false);
+    }
+  }
+
+  return (
+    <div role="alert" className="sheet pane-in px-6 py-8">
+      <p className="label text-pen">The render failed</p>
+      <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed [overflow-wrap:anywhere]">
+        {run.error ?? "No error was recorded."}
+      </p>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={retry}
+          className="btn btn-ink min-h-11 cursor-pointer rounded-md px-5 font-mono text-[13px] font-semibold uppercase disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {pending ? "Queuing…" : "Retry render"}
+        </button>
+        {notice && <span className="text-[15px] text-pen" aria-live="polite">{notice}</span>}
+      </div>
+    </div>
+  );
+}
+
 function StatusSheet({ label, tone, children }: { label: string; tone?: "error"; children: React.ReactNode }) {
   return (
     <div role={tone === "error" ? "alert" : "status"} className="sheet pane-in px-6 py-8">
       <p className={`label ${tone === "error" ? "text-pen" : ""}`}>{label}</p>
-      <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed [overflow-wrap:anywhere]">{children}</p>
+      <div className="mt-2 max-w-[60ch] text-[15px] leading-relaxed [overflow-wrap:anywhere]">{children}</div>
     </div>
   );
 }

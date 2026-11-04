@@ -4,15 +4,15 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 
 /**
  * Every model name the ad pipeline uses, in one place.
- * Checked 2026-11-04 against Groq's /models list; the Gemini name follows the
- * free-tier Flash-Lite line (higher daily quota than Flash). Override via env.
+ * Checked 2026-11-04 against Groq's /models list; the Gemini name is the newest
+ * Flash-Lite in /v1beta/models (higher free daily quota than Flash). Override via env.
  */
 export const AD_MODELS = {
   writer: { provider: "groq", model: process.env.AD_WRITER_MODEL ?? "openai/gpt-oss-120b" },
-  critic: { provider: "gemini", model: process.env.AD_CRITIC_MODEL ?? "gemini-3.8-flash-lite" },
+  critic: { provider: "gemini", model: process.env.AD_CRITIC_MODEL ?? "gemini-3.5-flash-lite" },
   // Used when the primary provider is rate-limited, down, or not configured.
   groqFallback: { provider: "groq", model: "openai/gpt-oss-20b" },
-  geminiFallback: { provider: "gemini", model: process.env.AD_CRITIC_MODEL ?? "gemini-3.8-flash-lite" },
+  geminiFallback: { provider: "gemini", model: process.env.AD_CRITIC_MODEL ?? "gemini-3.5-flash-lite" },
 } as const;
 
 type ModelSpec = { provider: "groq" | "gemini"; model: string };

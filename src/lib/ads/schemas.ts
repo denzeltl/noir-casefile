@@ -48,3 +48,37 @@ export type Critique = z.infer<typeof CritiqueSchema>;
 
 /** A hook with the critic's verdict attached, as stored in ad_runs.hooks_json. */
 export type ScoredHook = Hook & { score: number; feedback: string };
+
+/** Drawn backdrops the trailer template knows (video/index.html). */
+export const MOTIFS = ["curtain", "rain", "spotlight", "clue", "lineup"] as const;
+
+/**
+ * The 15-second trailer, slot by slot. Timings are fixed by the template
+ * (hook 0–3s, three shots of 3s, call to action 12–15s), so the model only
+ * writes words and picks a backdrop per shot.
+ */
+export const StoryboardSchema = z.object({
+  hook: z.string().describe("Frame-0 line, max 10 words. Usually the chosen hook, tightened."),
+  shots: z
+    .array(
+      z.object({
+        overlay: z.string().describe("On-screen text for this 3-second shot, max 9 words"),
+        motif: z.enum(MOTIFS).describe("Backdrop: curtain, rain, spotlight, clue (a tagged evidence card) or lineup (the suspects' names)"),
+        detail: z
+          .string()
+          .describe("For 'clue': the clue's name from the brief. Otherwise a 1-3 word caption, e.g. 'Chicago, 1927'"),
+      })
+    )
+    .length(3),
+  cta: z.string().describe("Closing line, max 7 words, a dare to play, e.g. 'Can you name the killer?'"),
+});
+
+/** Worker → graph at the render interrupt. Failures never resume the graph. */
+export const RenderResultSchema = z.object({
+  action: z.literal("rendered"),
+  videoUrl: z.string().url(),
+});
+
+export type Motif = (typeof MOTIFS)[number];
+export type Storyboard = z.infer<typeof StoryboardSchema>;
+export type RenderResult = z.infer<typeof RenderResultSchema>;

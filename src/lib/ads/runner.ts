@@ -4,7 +4,7 @@ import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { getDb } from "@/lib/db";
 import type { AdBrief } from "./brief";
 import { buildAdGraph, RECURSION_LIMIT } from "./graph";
-import type { HookDecision } from "./schemas";
+import type { HookDecision, RenderResult } from "./schemas";
 
 let saver: Promise<PostgresSaver> | null = null;
 
@@ -32,16 +32,25 @@ export function startRun(runId: string, brief: AdBrief) {
   return advance(runId, { brief });
 }
 
-/** Feed the admin's decision into interrupt #1 and run to the next pause. */
-export function resumeRun(runId: string, decision: HookDecision) {
-  return advance(runId, new Command({ resume: decision }));
+/** Answer whichever interrupt the run is paused at and run to the next pause. */
+export function resumeRun(runId: string, answer: HookDecision | RenderResult) {
+  return advance(runId, new Command({ resume: answer }));
 }
 
-/** Is the run's checkpoint paused at pick_hook? Guards the resume route. */
-export async function isWaitingForHook(runId: string): Promise<boolean> {
+export type PausedAt = "pickHook" | "render" | null;
+
+/** The node the run's checkpoint is paused at, or null. Guards the resume route. */
+export async function pausedAt(runId: string): Promise<PausedAt> {
   const snap = await (await getGraph()).getState({ configurable: { thread_id: runId } });
-  return snap.tasks.some((t) => t.name === "pickHook" && t.interrupts.length > 0);
+  const task = snap.tasks.find((t) => t.interrupts.length > 0);
+  return task?.name === "pickHook" || task?.name === "render" ? task.name : null;
 }
+
+// ad_runs.status for each pause; a finished graph has a video waiting for approval.
+const STATUS_AT: Record<Exclude<PausedAt, null>, string> = {
+  pickHook: "waiting_hook",
+  render: "waiting_render",
+};
 
 /**
  * Invoke until the graph pauses or ends, then mirror the checkpoint into
@@ -54,14 +63,16 @@ async function advance(runId: string, input: Parameters<Awaited<ReturnType<typeo
     const graph = await getGraph();
     const result = await graph.invoke(input, { ...config, recursionLimit: RECURSION_LIMIT });
     const snap = await graph.getState(config);
-    const paused = snap.tasks.some((t) => t.interrupts.length > 0);
+    const node = snap.tasks.find((t) => t.interrupts.length > 0)?.name as PausedAt | undefined;
     await db
       .from("ad_runs")
       .update({
-        // Not paused means a hook was chosen; the storyboard node (step 5) takes it from here.
-        status: paused ? "waiting_hook" : "running",
+        status: node ? STATUS_AT[node] : "waiting_video",
         hooks_json: { hooks: result.hooks, trail: result.trail, critique: result.feedback },
         chosen_hook: result.chosenHook ?? null,
+        storyboard_json: result.storyboard ? { storyboard: result.storyboard, trailer: result.trailer } : null,
+        video_url: result.videoUrl ?? null,
+        claimed_at: null,
         loops: result.loops,
         error: null,
         updated_at: new Date().toISOString(),

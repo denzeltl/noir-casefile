@@ -96,17 +96,27 @@ export interface AdminRun {
   chosenHook: ScoredHook | null;
   loops: number;
   error: string | null;
+  videoUrl: string | null;
+  /** When the PC render worker last checked in; null if it never has. */
+  workerLastSeen: string | null;
+  /** Checked in within WORKER_ONLINE_MS (it beats every 30 s). */
+  workerOnline: boolean;
 }
+
+const WORKER_ONLINE_MS = 2 * 60_000;
 
 /** One run for /admin/runs/[id]. Brief fields only, never case_json. Null if missing. */
 export async function getAdminRun(id: string): Promise<AdminRun | null> {
   const db = getDb();
   if (!db) throw new Error("No database connected.");
-  const { data, error } = await db
-    .from("ad_runs")
-    .select("id, status, hooks_json, chosen_hook, loops, error, cases(brief_json)")
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data, error }, beat] = await Promise.all([
+    db
+      .from("ad_runs")
+      .select("id, status, hooks_json, chosen_hook, loops, error, video_url, cases(brief_json)")
+      .eq("id", id)
+      .maybeSingle(),
+    db.from("worker_heartbeat").select("worker_last_seen").eq("id", "render-worker").maybeSingle(),
+  ]);
   if (error) throw new Error(error.message);
   if (!data) return null;
 
@@ -123,5 +133,9 @@ export async function getAdminRun(id: string): Promise<AdminRun | null> {
     chosenHook: (data.chosen_hook as ScoredHook | null) ?? null,
     loops: data.loops,
     error: data.error,
+    videoUrl: data.video_url,
+    workerLastSeen: beat.data?.worker_last_seen ?? null,
+    workerOnline:
+      Boolean(beat.data) && Date.now() - new Date(beat.data!.worker_last_seen).getTime() < WORKER_ONLINE_MS,
   };
 }

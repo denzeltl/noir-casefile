@@ -6,11 +6,15 @@ import {
   HookDecisionSchema,
   HookSetSchema,
   PASS_SCORE,
+  RenderResultSchema,
+  StoryboardSchema,
+  type Storyboard,
   type Hook,
   type HookDecision,
   type ScoredHook,
 } from "./schemas.ts";
 import { structuredCall } from "./structured.ts";
+import { toTrailerVariables, type TrailerVariables } from "./trailer.ts";
 
 export const MAX_LOOPS = 3;
 export { PASS_SCORE };
@@ -26,6 +30,10 @@ export const AdState = Annotation.Root({
   loops: Annotation<number>({ reducer: (_, next) => next, default: () => 0 }),
   // Set once the admin picks (or edits) a hook at interrupt #1.
   chosenHook: Annotation<ScoredHook | null>({ reducer: (_, next) => next, default: () => null }),
+  storyboard: Annotation<Storyboard | null>({ reducer: (_, next) => next, default: () => null }),
+  // What the render worker feeds the HyperFrames template.
+  trailer: Annotation<TrailerVariables | null>({ reducer: (_, next) => next, default: () => null }),
+  videoUrl: Annotation<string | null>({ reducer: (_, next) => next, default: () => null }),
   // Node-by-node trail for the admin timeline.
   trail: Annotation<string[]>({ reducer: (a, b) => a.concat(b), default: () => [] }),
 });
@@ -105,10 +113,7 @@ async function pickHook(state: State): Promise<Partial<State>> {
 export function applyHookDecision(state: State, decision: HookDecision): Partial<State> {
   if (decision.action === "rewrite") {
     return {
-      feedback: `The producer asked for a rewrite: ${decision.note}
-
-Last critique:
-${state.feedback ?? "none"}`,
+      feedback: `The producer asked for a rewrite: ${decision.note}\n\nLast critique:\n${state.feedback ?? "none"}`,
       chosenHook: null,
       trail: ["pickHook:rewrite"],
     };
@@ -121,8 +126,45 @@ ${state.feedback ?? "none"}`,
 }
 
 // A rewrite is one extra pass even when the auto-loop budget is spent.
-function afterPick(state: State): "hookWriter" | typeof END {
-  return state.chosenHook ? END : "hookWriter";
+function afterPick(state: State): "hookWriter" | "storyboardWriter" {
+  return state.chosenHook ? "storyboardWriter" : "hookWriter";
+}
+
+const STORYBOARD_SYSTEM = `You storyboard 15-second vertical (9:16) trailers for "Noir Casefile", a browser murder-mystery game.
+The template is fixed: frame 0 shows the hook (0-3s), then three 3-second shots, then the call to action (12-15s) over the suspects' names.
+Rules:
+- Every word is on-screen text, read in under 3 seconds: hook max 10 words, each shot max 9 words, CTA max 7 words.
+- Build tension shot to shot. Use concrete things from the brief (places, clues, the victim), never generic noir filler.
+- Never reveal or hint who the killer is. You don't know. Don't single out one suspect.
+- Use each motif at most once. For a 'clue' shot, detail must be a clue name from the brief.`;
+
+async function storyboardWriter(state: State): Promise<Partial<State>> {
+  const hook = state.chosenHook!;
+  const { data, model } = await structuredCall({
+    schema: StoryboardSchema,
+    name: "storyboard",
+    system: STORYBOARD_SYSTEM,
+    user: `Case brief (JSON):\n${JSON.stringify(state.brief, null, 2)}\n\nApproved hook: ${hook.hook}\nApproved script: ${hook.script}`,
+    primary: AD_MODELS.writer,
+    fallback: AD_MODELS.geminiFallback,
+    temperature: 0.7,
+  });
+  return {
+    storyboard: data,
+    trailer: toTrailerVariables(data, state.brief),
+    trail: [`storyboardWriter:${model}`],
+  };
+}
+
+/**
+ * Render handoff. Nothing renders on the server: the run waits here
+ * (ad_runs.status = waiting_render) until the PC render worker uploads the MP4
+ * and resumes with its URL. A failed render leaves the run paused here, so a
+ * retry is just another resume.
+ */
+async function render(state: State): Promise<Partial<State>> {
+  const result = RenderResultSchema.parse(interrupt({ kind: "render", trailer: state.trailer }));
+  return { videoUrl: result.videoUrl, trail: ["render:done"] };
 }
 
 /** Without a checkpointer the graph still runs, but interrupt() can't pause it. */
@@ -131,10 +173,14 @@ export function buildAdGraph(checkpointer?: BaseCheckpointSaver) {
     .addNode("hookWriter", hookWriter)
     .addNode("critic", critic)
     .addNode("pickHook", pickHook)
+    .addNode("storyboardWriter", storyboardWriter)
+    .addNode("render", render)
     .addEdge(START, "hookWriter")
     .addEdge("hookWriter", "critic")
     .addConditionalEdges("critic", afterCritic, ["hookWriter", "pickHook"])
-    .addConditionalEdges("pickHook", afterPick, ["hookWriter", END])
+    .addConditionalEdges("pickHook", afterPick, ["hookWriter", "storyboardWriter"])
+    .addEdge("storyboardWriter", "render")
+    .addEdge("render", END)
     .compile({ checkpointer });
 }
 

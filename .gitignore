@@ -42,3 +42,8 @@ next-env.d.ts
 
 # elan scratch (briefs, prototypes, screenshots)
 /.elan/
+
+# Ad Studio render worker output and HyperFrames scratch
+/tmp/
+/video/.hyperframes/
+/video/renders/
