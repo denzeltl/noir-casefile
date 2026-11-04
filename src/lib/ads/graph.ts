@@ -7,7 +7,8 @@ import {
   HookSetSchema,
   PASS_SCORE,
   RenderResultSchema,
-  StoryboardSchema,
+  shotCountFor,
+  storyboardSchemaFor,
   VideoDecisionSchema,
   type Storyboard,
   type VideoDecision,
@@ -141,13 +142,14 @@ function afterPick(state: State): "hookWriter" | "storyboardWriter" {
   return state.chosenHook ? "storyboardWriter" : "hookWriter";
 }
 
-const STORYBOARD_SYSTEM = `You storyboard 15-second vertical (9:16) trailers for "Noir Casefile", a browser murder-mystery game.
-The template is fixed: frame 0 shows the hook (0-3s), then three 3-second shots, then the call to action (12-15s) over the suspects' names.
+const STORYBOARD_SYSTEM = `You storyboard short vertical (9:16) trailers for "Noir Casefile", a browser murder-mystery game.
+The template is fixed: frame 0 shows the hook (0-3s), then 3-second shots (the user message says how many), then the call to action over every suspect's name.
 Rules:
 - Every word is on-screen text, read in under 3 seconds: hook max 10 words, each shot max 9 words, CTA max 7 words.
 - Build tension shot to shot. Use concrete things from the brief (places, clues, the victim), never generic noir filler.
 - Never reveal or hint who the killer is. You don't know. Don't single out one suspect.
-- Use each motif at most once. For a 'clue' shot, detail must be a clue name from the brief.`;
+- Use each motif at most once. For a 'clue' shot, detail must be a clue name from the brief.
+- 'board' shows every clue from the brief at once and 'lineup' every suspect's name; use them when the case has many clues or suspects.`;
 
 async function storyboardWriter(state: State): Promise<Partial<State>> {
   const hook = state.chosenHook!;
@@ -156,11 +158,12 @@ async function storyboardWriter(state: State): Promise<Partial<State>> {
       ? `\n\nRevise this storyboard:\n${JSON.stringify(state.storyboard, null, 2)}\n` +
         `The producer's note: ${state.storyboardNote}\nChange what the note asks for; keep the rest.`
       : "";
+  const shots = shotCountFor(state.brief.suspects.length);
   const { data, model } = await structuredCall({
-    schema: StoryboardSchema,
+    schema: storyboardSchemaFor(state.brief.suspects.length),
     name: "storyboard",
     system: STORYBOARD_SYSTEM,
-    user: `Case brief (JSON):\n${JSON.stringify(state.brief, null, 2)}\n\nApproved hook: ${hook.hook}\nApproved script: ${hook.script}${revision}`,
+    user: `Case brief (JSON):\n${JSON.stringify(state.brief, null, 2)}\n\nApproved hook: ${hook.hook}\nApproved script: ${hook.script}\n\nWrite exactly ${shots} shots (${shots === 4 ? "long cut, 19 seconds" : "15 seconds"}).${revision}`,
     primary: AD_MODELS.writer,
     fallback: AD_MODELS.geminiFallback,
     temperature: 0.7,

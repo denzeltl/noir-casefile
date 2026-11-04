@@ -1,8 +1,12 @@
 <!doctype html>
 <!--
-  Noir Casefile trailer: 15 s, 1080x1920. A fixed template; the ad pipeline
-  fills the variables (src/lib/ads/trailer.ts) and the render worker renders it.
-  Slots: hook 0-3 s, three shots of 3 s, call to action 12-15 s.
+  Noir Casefile trailer, 1080x1920. A fixed template; the ad pipeline fills the
+  variables (src/lib/ads/trailer.ts) and the render worker renders it.
+  This file is the long cut (19 s, for cases with 4-5 suspects): hook 0-3 s,
+  four shots of 3 s, call to action 15-19 s. For 3-suspect cases the worker
+  renders the short cut (15 s): shortCut() in src/lib/ads/trailer.ts drops
+  shot 4 and moves the call to action to 12-15 s. Timings in the script below
+  are read from the clips' data-start, so both cuts animate correctly.
   Only spoiler-free words reach this file: storyboard text and suspect names.
 -->
 <html
@@ -11,18 +15,29 @@
     {"id":"title","type":"string","label":"Case title","default":"Blood on the Velvet Curtain","maxLength":48},
     {"id":"hook","type":"string","label":"Hook (frame 0)","default":"The fireplace poker is gone. So is Julius Thorne.","maxLength":80},
     {"id":"shot1","type":"string","label":"Shot 1 text","default":"Chicago, 1927. The band stops.","maxLength":72},
-    {"id":"shot1Motif","type":"enum","label":"Shot 1 backdrop","default":"curtain","options":[{"value":"curtain","label":"Curtain"},{"value":"rain","label":"Rain"},{"value":"spotlight","label":"Spotlight"},{"value":"clue","label":"Clue"},{"value":"lineup","label":"Lineup"}]},
+    {"id":"shot1Motif","type":"enum","label":"Shot 1 backdrop","default":"curtain","options":[{"value":"curtain","label":"Curtain"},{"value":"rain","label":"Rain"},{"value":"spotlight","label":"Spotlight"},{"value":"clue","label":"Clue"},{"value":"board","label":"Evidence board"},{"value":"lineup","label":"Lineup"}]},
     {"id":"shot1Detail","type":"string","label":"Shot 1 caption","default":"The Velvet Curtain","maxLength":32},
     {"id":"shot2","type":"string","label":"Shot 2 text","default":"A private eye hits the floor.","maxLength":72},
-    {"id":"shot2Motif","type":"enum","label":"Shot 2 backdrop","default":"clue","options":[{"value":"curtain","label":"Curtain"},{"value":"rain","label":"Rain"},{"value":"spotlight","label":"Spotlight"},{"value":"clue","label":"Clue"},{"value":"lineup","label":"Lineup"}]},
+    {"id":"shot2Motif","type":"enum","label":"Shot 2 backdrop","default":"clue","options":[{"value":"curtain","label":"Curtain"},{"value":"rain","label":"Rain"},{"value":"spotlight","label":"Spotlight"},{"value":"clue","label":"Clue"},{"value":"board","label":"Evidence board"},{"value":"lineup","label":"Lineup"}]},
     {"id":"shot2Detail","type":"string","label":"Shot 2 caption","default":"Broken Bead","maxLength":32},
     {"id":"shot3","type":"string","label":"Shot 3 text","default":"Three alibis. One of them cracks.","maxLength":72},
-    {"id":"shot3Motif","type":"enum","label":"Shot 3 backdrop","default":"spotlight","options":[{"value":"curtain","label":"Curtain"},{"value":"rain","label":"Rain"},{"value":"spotlight","label":"Spotlight"},{"value":"clue","label":"Clue"},{"value":"lineup","label":"Lineup"}]},
+    {"id":"shot3Motif","type":"enum","label":"Shot 3 backdrop","default":"spotlight","options":[{"value":"curtain","label":"Curtain"},{"value":"rain","label":"Rain"},{"value":"spotlight","label":"Spotlight"},{"value":"clue","label":"Clue"},{"value":"board","label":"Evidence board"},{"value":"lineup","label":"Lineup"}]},
     {"id":"shot3Detail","type":"string","label":"Shot 3 caption","default":"Interrogation room","maxLength":32},
+    {"id":"shot4","type":"string","label":"Shot 4 text (long cut)","default":"Five names. Four of them are lying.","maxLength":72},
+    {"id":"shot4Motif","type":"enum","label":"Shot 4 backdrop","default":"board","options":[{"value":"curtain","label":"Curtain"},{"value":"rain","label":"Rain"},{"value":"spotlight","label":"Spotlight"},{"value":"clue","label":"Clue"},{"value":"board","label":"Evidence board"},{"value":"lineup","label":"Lineup"}]},
+    {"id":"shot4Detail","type":"string","label":"Shot 4 caption","default":"The evidence","maxLength":32},
     {"id":"cta","type":"string","label":"Call to action","default":"Can you name the killer?","maxLength":48},
     {"id":"suspect1","type":"string","label":"Suspect 1","default":"Eleanor Vane","maxLength":28},
     {"id":"suspect2","type":"string","label":"Suspect 2","default":"Marcus Grady","maxLength":28},
-    {"id":"suspect3","type":"string","label":"Suspect 3","default":"Victor Sterling","maxLength":28}
+    {"id":"suspect3","type":"string","label":"Suspect 3","default":"Victor Sterling","maxLength":28},
+    {"id":"suspect4","type":"string","label":"Suspect 4","default":"Lena Moss","maxLength":28},
+    {"id":"suspect5","type":"string","label":"Suspect 5","default":"Father Doyle","maxLength":28},
+    {"id":"clue1","type":"string","label":"Clue 1","default":"Broken Bead","maxLength":32},
+    {"id":"clue2","type":"string","label":"Clue 2","default":"Smudged Mirror","maxLength":32},
+    {"id":"clue3","type":"string","label":"Clue 3","default":"Missing Poker","maxLength":32},
+    {"id":"clue4","type":"string","label":"Clue 4","default":"Torn Setlist","maxLength":32},
+    {"id":"clue5","type":"string","label":"Clue 5","default":"","maxLength":32},
+    {"id":"clue6","type":"string","label":"Clue 6","default":"","maxLength":32}
   ]'
 >
   <head>
@@ -110,6 +125,19 @@
         background-image: repeating-linear-gradient(180deg, transparent 0 118px, rgba(255,252,240,.12) 118px 122px); }
       .m-lineup .names { position: absolute; top: 380px; left: 90px; right: 90px; display: grid; gap: 40px; }
       .m-lineup .names p { font-size: 66px; font-style: italic; color: var(--paper); opacity: .55; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+      /* Evidence board: every clue as a tag pinned to cork, two columns. */
+      .m-board { background: radial-gradient(ellipse 85% 60% at 50% 42%, #3a2c1f, #1a140f 80%); }
+      .m-board .pins { position: absolute; top: 330px; left: 90px; right: 90px; display: grid;
+        grid-template-columns: 1fr 1fr; gap: 28px 26px; }
+      .m-board .pin { position: relative; background: #efe2c4; color: var(--ink); padding: 40px 26px 26px; border-radius: 6px;
+        box-shadow: 0 26px 40px -22px rgba(0,0,0,.9); font-size: 40px; line-height: 1.08; letter-spacing: -0.015em;
+        overflow-wrap: anywhere; }
+      .m-board .pin::before { content: ""; position: absolute; top: 14px; left: 22px; width: 16px; height: 16px; border-radius: 50%;
+        background: var(--pen); box-shadow: 0 3px 4px rgba(0,0,0,.5); }
+      .m-board .tilt { rotate: -2.5deg; }
+      .m-board .tilt2 { rotate: 2deg; }
+      #root.many .m-lineup .names { top: 370px; gap: 12px; }
+      #root.many .m-lineup .names p { font-size: 52px; }
       .caption { position: absolute; top: 260px; left: 90px; right: 90px; }
       .caption .label { color: var(--hl-peach); }
       .shot-strip { top: 880px; }
@@ -117,6 +145,9 @@
       /* ── Call to action ── */
       #cta-scene { background: radial-gradient(ellipse 80% 55% at 50% 40%, #2a2420, var(--night) 72%); }
       #lineup { position: absolute; top: 250px; left: 90px; right: 90px; display: grid; gap: 22px; }
+      #root.many #lineup { top: 200px; gap: 14px; }
+      #root.many .card { padding: 18px 32px; }
+      #root.many .card .who { font-size: 46px; }
       .card { background: var(--paper); color: var(--ink); padding: 26px 36px; display: flex; align-items: baseline; gap: 28px;
         box-shadow: 0 24px 40px -24px rgba(0,0,0,.9); }
       .card .label { color: #625d53; font-size: 28px; }
@@ -128,10 +159,13 @@
       #wordmark { position: absolute; top: 1225px; left: 90px; right: 90px; }
       #wordmark .label { color: var(--paper); font-size: 32px; }
       #wordmark .sub { margin-top: 10px; color: var(--muted); }
+      #root.many #cta-line { top: 900px; font-size: 92px; }
+      #root.many #stamp { top: 1150px; }
+      #root.many #wordmark { top: 1280px; }
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1080" data-height="1920">
+    <div id="root" data-composition-id="main" data-start="0" data-duration="19" data-width="1080" data-height="1920">
       <!-- 0-3 s: hook, already on screen at frame 0 (the thumbnail) -->
       <section id="hook-scene" class="scene clip" data-start="0" data-duration="3" data-track-index="1" data-track-kind="graphics">
         <div class="vig" data-layout-allow-occlusion></div>
@@ -139,13 +173,14 @@
         <div id="hook-strip" class="strip"><p id="hook-text" data-var-text="hook">The fireplace poker is gone. So is Julius Thorne.</p></div>
       </section>
 
-      <!-- 3-12 s: three shots, each with a backdrop picked by shotNMotif -->
+      <!-- 3-15 s: four shots (three in the short cut), each with a backdrop picked by shotNMotif -->
       <section id="shot1" class="scene shot clip" data-start="3" data-duration="3" data-track-index="2" data-track-kind="graphics" data-n="1">
         <div class="layer m-curtain"></div>
         <div class="layer m-rain"><div class="drops"></div></div>
         <div class="layer m-spotlight"><div class="beam"></div></div>
         <div class="layer m-clue"><div class="tag"><p class="label">Evidence</p><p class="name" data-var-text="shot1Detail">The Velvet Curtain</p></div></div>
-        <div class="layer m-lineup"><div class="names"><p data-var-text="suspect1">Eleanor Vane</p><p data-var-text="suspect2">Marcus Grady</p><p data-var-text="suspect3">Victor Sterling</p></div></div>
+        <div class="layer m-board"><div class="pins"><p class="pin tilt" data-var-text="clue1">Broken Bead</p><p class="pin tilt2" data-var-text="clue2">Smudged Mirror</p><p class="pin tilt" data-var-text="clue3">Missing Poker</p><p class="pin tilt2" data-var-text="clue4">Torn Setlist</p><p class="pin tilt" data-var-text="clue5"></p><p class="pin tilt2" data-var-text="clue6"></p></div></div>
+        <div class="layer m-lineup"><div class="names"><p data-var-text="suspect1">Eleanor Vane</p><p data-var-text="suspect2">Marcus Grady</p><p data-var-text="suspect3">Victor Sterling</p><p data-var-text="suspect4">Lena Moss</p><p data-var-text="suspect5">Father Doyle</p></div></div>
         <div class="vig" data-layout-allow-occlusion></div>
         <div class="caption"><p class="label" data-var-text="shot1Detail">The Velvet Curtain</p></div>
         <div class="strip shot-strip"><p data-var-text="shot1">Chicago, 1927. The band stops.</p></div>
@@ -155,7 +190,8 @@
         <div class="layer m-rain"><div class="drops"></div></div>
         <div class="layer m-spotlight"><div class="beam"></div></div>
         <div class="layer m-clue"><div class="tag"><p class="label">Evidence</p><p class="name" data-var-text="shot2Detail">Broken Bead</p></div></div>
-        <div class="layer m-lineup"><div class="names"><p data-var-text="suspect1">Eleanor Vane</p><p data-var-text="suspect2">Marcus Grady</p><p data-var-text="suspect3">Victor Sterling</p></div></div>
+        <div class="layer m-board"><div class="pins"><p class="pin tilt" data-var-text="clue1">Broken Bead</p><p class="pin tilt2" data-var-text="clue2">Smudged Mirror</p><p class="pin tilt" data-var-text="clue3">Missing Poker</p><p class="pin tilt2" data-var-text="clue4">Torn Setlist</p><p class="pin tilt" data-var-text="clue5"></p><p class="pin tilt2" data-var-text="clue6"></p></div></div>
+        <div class="layer m-lineup"><div class="names"><p data-var-text="suspect1">Eleanor Vane</p><p data-var-text="suspect2">Marcus Grady</p><p data-var-text="suspect3">Victor Sterling</p><p data-var-text="suspect4">Lena Moss</p><p data-var-text="suspect5">Father Doyle</p></div></div>
         <div class="vig" data-layout-allow-occlusion></div>
         <div class="caption"><p class="label" data-var-text="shot2Detail">Broken Bead</p></div>
         <div class="strip shot-strip"><p data-var-text="shot2">A private eye hits the floor.</p></div>
@@ -165,19 +201,35 @@
         <div class="layer m-rain"><div class="drops"></div></div>
         <div class="layer m-spotlight"><div class="beam"></div></div>
         <div class="layer m-clue"><div class="tag"><p class="label">Evidence</p><p class="name" data-var-text="shot3Detail">Interrogation room</p></div></div>
-        <div class="layer m-lineup"><div class="names"><p data-var-text="suspect1">Eleanor Vane</p><p data-var-text="suspect2">Marcus Grady</p><p data-var-text="suspect3">Victor Sterling</p></div></div>
+        <div class="layer m-board"><div class="pins"><p class="pin tilt" data-var-text="clue1">Broken Bead</p><p class="pin tilt2" data-var-text="clue2">Smudged Mirror</p><p class="pin tilt" data-var-text="clue3">Missing Poker</p><p class="pin tilt2" data-var-text="clue4">Torn Setlist</p><p class="pin tilt" data-var-text="clue5"></p><p class="pin tilt2" data-var-text="clue6"></p></div></div>
+        <div class="layer m-lineup"><div class="names"><p data-var-text="suspect1">Eleanor Vane</p><p data-var-text="suspect2">Marcus Grady</p><p data-var-text="suspect3">Victor Sterling</p><p data-var-text="suspect4">Lena Moss</p><p data-var-text="suspect5">Father Doyle</p></div></div>
         <div class="vig" data-layout-allow-occlusion></div>
         <div class="caption"><p class="label" data-var-text="shot3Detail">Interrogation room</p></div>
         <div class="strip shot-strip"><p data-var-text="shot3">Three alibis. One of them cracks.</p></div>
       </section>
+      <!-- shot4:start (long cut only) -->
+      <section id="shot4" class="scene shot clip" data-start="12" data-duration="3" data-track-index="5" data-track-kind="graphics" data-n="4">
+        <div class="layer m-curtain"></div>
+        <div class="layer m-rain"><div class="drops"></div></div>
+        <div class="layer m-spotlight"><div class="beam"></div></div>
+        <div class="layer m-clue"><div class="tag"><p class="label">Evidence</p><p class="name" data-var-text="shot4Detail">The evidence</p></div></div>
+        <div class="layer m-board"><div class="pins"><p class="pin tilt" data-var-text="clue1">Broken Bead</p><p class="pin tilt2" data-var-text="clue2">Smudged Mirror</p><p class="pin tilt" data-var-text="clue3">Missing Poker</p><p class="pin tilt2" data-var-text="clue4">Torn Setlist</p><p class="pin tilt" data-var-text="clue5"></p><p class="pin tilt2" data-var-text="clue6"></p></div></div>
+        <div class="layer m-lineup"><div class="names"><p data-var-text="suspect1">Eleanor Vane</p><p data-var-text="suspect2">Marcus Grady</p><p data-var-text="suspect3">Victor Sterling</p><p data-var-text="suspect4">Lena Moss</p><p data-var-text="suspect5">Father Doyle</p></div></div>
+        <div class="vig" data-layout-allow-occlusion></div>
+        <div class="caption"><p class="label" data-var-text="shot4Detail">The evidence</p></div>
+        <div class="strip shot-strip"><p data-var-text="shot4">Five names. Four of them are lying.</p></div>
+      </section>
+      <!-- shot4:end -->
 
-      <!-- 12-15 s: the lineup and the dare -->
-      <section id="cta-scene" class="scene clip" data-start="12" data-duration="3" data-track-index="5" data-track-kind="graphics">
+      <!-- 15-19 s (short cut 12-15 s): the lineup and the dare -->
+      <section id="cta-scene" class="scene clip" data-start="15" data-duration="4" data-track-index="6" data-track-kind="graphics">
         <div class="vig" data-layout-allow-occlusion></div>
         <div id="lineup">
           <div class="card" id="card1"><span class="label">No. 1</span><span class="who" data-var-text="suspect1">Eleanor Vane</span></div>
           <div class="card" id="card2"><span class="label">No. 2</span><span class="who" data-var-text="suspect2">Marcus Grady</span></div>
           <div class="card" id="card3"><span class="label">No. 3</span><span class="who" data-var-text="suspect3">Victor Sterling</span></div>
+          <div class="card" id="card4"><span class="label">No. 4</span><span class="who" data-var-text="suspect4">Lena Moss</span></div>
+          <div class="card" id="card5"><span class="label">No. 5</span><span class="who" data-var-text="suspect5">Father Doyle</span></div>
         </div>
         <p id="cta-line" data-var-text="cta">Can you name the killer?</p>
         <div id="stamp">Unsolved</div>
@@ -187,21 +239,28 @@
     </div>
 
     <script>
-      // Show only each shot's chosen backdrop; drop empty suspect cards. Runs once at init.
+      // Show only each shot's chosen backdrop; hide empty names and clues. Runs once at init.
       const vars = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
-      const fallback = { 1: "curtain", 2: "clue", 3: "spotlight" };
+      const fallback = { 1: "curtain", 2: "clue", 3: "spotlight", 4: "board" };
+      const filled = (k) => !(k in vars) || Boolean(vars[k]);
       document.querySelectorAll(".shot").forEach((shot) => {
         const n = shot.dataset.n;
         const motif = vars["shot" + n + "Motif"] || fallback[n];
         shot.querySelectorAll(".layer").forEach((l) => {
           if (!l.classList.contains("m-" + motif)) l.style.display = "none";
         });
-        // A clue shot names the clue on the tag, so the caption above it would repeat it.
-        if (motif === "clue") shot.querySelector(".caption").style.display = "none";
+        // Clue and board shots name their clues on tags, so the caption above would repeat them.
+        if (motif === "clue" || motif === "board") shot.querySelector(".caption").style.display = "none";
       });
-      [1, 2, 3].forEach((i) => {
-        if (("suspect" + i) in vars && !vars["suspect" + i]) document.getElementById("card" + i).style.display = "none";
+      document.querySelectorAll(".names p, .pin").forEach((el) => {
+        if (!filled(el.dataset.varText) || !el.textContent.trim()) el.style.display = "none";
       });
+      const suspects = [1, 2, 3, 4, 5].filter((i) => filled("suspect" + i));
+      [1, 2, 3, 4, 5].forEach((i) => {
+        if (!suspects.includes(i)) document.getElementById("card" + i).style.display = "none";
+      });
+      // Four or five names: tighter lineups so they fit above the dare.
+      if (suspects.length > 3) document.getElementById("root").classList.add("many");
 
       // Split the hook into one highlighter mark per word (static markup, built once).
       const hookEl = document.getElementById("hook-text");
@@ -218,9 +277,10 @@
       tl.fromTo("#hook-text .hl", { scaleX: 0 }, { scaleX: 1, duration: 0.16, ease: "power2.inOut", stagger: 0.07 }, 0.35);
       tl.fromTo("#hook-strip", { scale: 1 }, { scale: 1.04, duration: 2.95, ease: "none" }, 0);
 
-      // Shots: backdrop drifts for the whole shot, words land early and hold.
-      [3, 6, 9].forEach((t, i) => {
-        const s = "#shot" + (i + 1);
+      // Shots: backdrop drifts for the whole shot, words land early and hold. Times come from the clips.
+      document.querySelectorAll(".shot").forEach((shot) => {
+        const t = Number(shot.dataset.start);
+        const s = "#" + shot.id;
         tl.fromTo(s + " .shot-strip", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: out }, t + 0.12);
         tl.fromTo(s + " .caption", { opacity: 0 }, { opacity: 1, duration: 0.3 }, t + 0.05);
         tl.fromTo(s + " .m-curtain", { x: -30, scale: 1.08 }, { x: 30, scale: 1.12, duration: 2.95, ease: "none" }, t);
@@ -229,15 +289,20 @@
         tl.fromTo(s + " .tag", { y: -80, rotation: -9, opacity: 0 }, { y: 0, rotation: -3, opacity: 1, duration: 0.45, ease: out }, t + 0.1);
         tl.fromTo(s + " .m-lineup", { y: 0 }, { y: -60, duration: 2.95, ease: "none" }, t);
         tl.fromTo(s + " .names p", { x: -50, opacity: 0 }, { x: 0, opacity: 0.55, duration: 0.3, ease: out, stagger: 0.12 }, t + 0.05);
+        // Evidence board: tags drop onto the cork one after another while the board settles.
+        tl.fromTo(s + " .pins", { scale: 1.06 }, { scale: 1, duration: 2.95, ease: "none" }, t);
+        tl.fromTo(s + " .pin", { y: -50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: out, stagger: 0.14 }, t + 0.1);
       });
 
       // Call to action: suspects step into the lineup, the dare lands, the stamp slams.
-      ["#card1", "#card2", "#card3"].forEach((c, i) => {
-        tl.fromTo(c, { x: -120, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: out }, 12.02 + i * 0.1);
+      const c0 = Number(document.getElementById("cta-scene").dataset.start);
+      suspects.forEach((n, i) => {
+        tl.fromTo("#card" + n, { x: -120, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: out }, c0 + 0.02 + i * 0.1);
       });
-      tl.fromTo("#cta-line", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: out }, 12.3);
-      tl.fromTo("#stamp", { scale: 1.6, rotation: -14, opacity: 0 }, { scale: 1, rotation: -8, opacity: 1, duration: 0.16, ease: "power4.in" }, 12.75);
-      tl.fromTo("#wordmark", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 12.85);
+      const after = c0 + 0.02 + suspects.length * 0.1;
+      tl.fromTo("#cta-line", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: out }, after);
+      tl.fromTo("#stamp", { scale: 1.6, rotation: -14, opacity: 0 }, { scale: 1, rotation: -8, opacity: 1, duration: 0.16, ease: "power4.in" }, after + 0.45);
+      tl.fromTo("#wordmark", { opacity: 0 }, { opacity: 1, duration: 0.25 }, after + 0.55);
 
       window.__timelines["main"] = tl;
       tl.seek(0);

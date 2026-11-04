@@ -54,3 +54,6 @@ next-env.d.ts
 !n8n/.env.example
 
 .elan/
+
+# Render worker short-cut copies (deleted after each render)
+video/_cut-*.html

@@ -62,7 +62,9 @@ test("trailer variables carry only storyboard words and suspect names", async ()
   );
   assert.equal(vars.shot2Motif, "clue");
   assert.equal(vars.suspect2, "Marcus");
-  assert.equal(vars.suspect3, undefined);
+  assert.equal(vars.suspect3, "");
+  assert.equal(vars.clue1, "Broken Bead");
+  assert.equal(vars.clue2, "");
   assert.ok(vars.shot3.length <= 72);
   assert.doesNotMatch(JSON.stringify(vars), /personality|isKiller|solution|alibi/);
 });
@@ -84,4 +86,26 @@ test("video decisions route: rerender reuses the storyboard, revise rewrites it 
   assert.equal(revise.videoUrl, null);
   assert.equal(afterApprove(revise), "storyboardWriter");
   assert.notEqual(afterApprove({ ...base, ...applyVideoDecision({ action: "approve" }) }), "render");
+});
+
+test("trailer cut: 4-5 suspects get four shots and the long cut, 3 get the short cut", async () => {
+  const { shotCountFor, storyboardSchemaFor } = await import("./schemas.ts");
+  assert.equal(shotCountFor(3), 3);
+  assert.equal(shotCountFor(5), 4);
+  const shot = { overlay: "x", motif: "board", detail: "d" };
+  const base = { hook: "h", cta: "c" };
+  assert.ok(storyboardSchemaFor(5).safeParse({ ...base, shots: [shot, shot, shot, shot] }).success);
+  assert.ok(!storyboardSchemaFor(5).safeParse({ ...base, shots: [shot, shot, shot] }).success);
+  assert.ok(!storyboardSchemaFor(3).safeParse({ ...base, shots: [shot, shot, shot, shot] }).success);
+});
+
+test("shortCut turns the 19 s template into a 15 s one without shot 4", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { shortCut } = await import("./trailer.ts");
+  const long = readFileSync(new URL("../../../video/index.html", import.meta.url), "utf8");
+  assert.match(long, /id="root"[^>]*data-duration="19"/);
+  const short = shortCut(long);
+  assert.doesNotMatch(short, /id="shot4"/);
+  assert.match(short, /id="root"[^>]*data-duration="15"/);
+  assert.match(short, /id="cta-scene"[^>]*data-start="12" data-duration="3"/);
 });

@@ -11,13 +11,14 @@ import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:f
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { notifyRunStatus } from "../src/lib/ads/notify.ts";
+import { isLongCut, shortCut } from "../src/lib/ads/trailer.ts";
 
 const POLL_MS = 10_000;
 const HEARTBEAT_MS = 30_000;
 const STALE_CLAIM_MS = 10 * 60_000;
 const RENDER_TIMEOUT_MS = 10 * 60_000;
 const BUCKET = "ad-videos";
-const TARGET_SECONDS = 15;
+
 
 const env = (name: string) => {
   const v = process.env[name];
@@ -94,17 +95,21 @@ async function render(id: string, trailer: Record<string, string>): Promise<stri
   const vars = join(tmp, `${id}.json`);
   const mp4 = join(tmp, `${id}.mp4`);
   writeFileSync(vars, JSON.stringify(trailer));
+  // video/index.html is the long cut (19 s). 3-suspect cases render a short-cut copy
+  // next to it (same folder, so assets/ paths still resolve), deleted afterwards.
+  const long = isLongCut(trailer);
+  const cut = long ? null : join("video", `_cut-${id}.html`);
+  if (cut) writeFileSync(cut, shortCut(readFileSync(join("video", "index.html"), "utf8")));
+  const target = long ? 19 : 15;
   try {
-    await run(
-      "npx",
-      ["hyperframes", "render", "video", "--variables-file", `"${vars}"`, "--quality", "looks", "--output", `"${mp4}"`, "--quiet"],
-      RENDER_TIMEOUT_MS
-    );
+    const args = ["hyperframes", "render", "video", "--variables-file", `"${vars}"`, "--quality", "looks", "--output", `"${mp4}"`, "--quiet"];
+    if (cut) args.push("--composition", `_cut-${id}.html`);
+    await run("npx", args, RENDER_TIMEOUT_MS);
     if (!statSync(mp4, { throwIfNoEntry: false })?.size) throw new Error("Render produced no file.");
     const seconds = Number(
       await run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", `"${mp4}"`], 30_000)
     );
-    if (!(Math.abs(seconds - TARGET_SECONDS) < 1)) throw new Error(`Render is ${seconds}s, expected ~${TARGET_SECONDS}s.`);
+    if (!(Math.abs(seconds - target) < 1)) throw new Error(`Render is ${seconds}s, expected ~${target}s.`);
 
     // A new name per render, so a re-render never serves a cached copy of the old one.
     const path = `${id}/${Date.now()}.mp4`;
@@ -116,6 +121,7 @@ async function render(id: string, trailer: Record<string, string>): Promise<stri
   } finally {
     rmSync(vars, { force: true });
     rmSync(mp4, { force: true });
+    if (cut) rmSync(cut, { force: true });
   }
 }
 

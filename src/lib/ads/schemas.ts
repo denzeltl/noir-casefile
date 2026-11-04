@@ -50,12 +50,13 @@ export type Critique = z.infer<typeof CritiqueSchema>;
 export type ScoredHook = Hook & { score: number; feedback: string };
 
 /** Drawn backdrops the trailer template knows (video/index.html). */
-export const MOTIFS = ["curtain", "rain", "spotlight", "clue", "lineup"] as const;
+export const MOTIFS = ["curtain", "rain", "spotlight", "clue", "board", "lineup"] as const;
 
 /**
- * The 15-second trailer, slot by slot. Timings are fixed by the template
- * (hook 0–3s, three shots of 3s, call to action 12–15s), so the model only
- * writes words and picks a backdrop per shot.
+ * The trailer, slot by slot. Timings are fixed by the template: hook 0–3s,
+ * then three shots of 3s (short cut, 15s) or four (long cut, 19s, for cases
+ * with 4–5 suspects), then the call to action. The model only writes words
+ * and picks a backdrop per shot; storyboardSchemaFor() pins the shot count.
  */
 export const StoryboardSchema = z.object({
   hook: z.string().describe("Frame-0 line, max 10 words. Usually the chosen hook, tightened."),
@@ -63,15 +64,32 @@ export const StoryboardSchema = z.object({
     .array(
       z.object({
         overlay: z.string().describe("On-screen text for this 3-second shot, max 9 words"),
-        motif: z.enum(MOTIFS).describe("Backdrop: curtain, rain, spotlight, clue (a tagged evidence card) or lineup (the suspects' names)"),
+        motif: z
+          .enum(MOTIFS)
+          .describe("Backdrop: curtain, rain, spotlight, clue (one tagged evidence card), board (every clue pinned to a board) or lineup (every suspect's name)"),
         detail: z
           .string()
           .describe("For 'clue': the clue's name from the brief. Otherwise a 1-3 word caption, e.g. 'Chicago, 1927'"),
       })
     )
-    .length(3),
+    .min(3)
+    .max(4),
   cta: z.string().describe("Closing line, max 7 words, a dare to play, e.g. 'Can you name the killer?'"),
 });
+
+/** Cases with more suspects than this get the long cut (four shots, 19 s). */
+export const SHORT_CUT_SUSPECTS = 3;
+
+/** Shots in the trailer for a case with this many suspects. */
+export function shotCountFor(suspects: number): 3 | 4 {
+  return suspects > SHORT_CUT_SUSPECTS ? 4 : 3;
+}
+
+/** The storyboard schema with the shot count pinned for this case. */
+export function storyboardSchemaFor(suspects: number) {
+  const n = shotCountFor(suspects);
+  return StoryboardSchema.extend({ shots: StoryboardSchema.shape.shots.length(n) });
+}
 
 /** Worker → graph at the render interrupt. Failures never resume the graph. */
 export const RenderResultSchema = z.object({
