@@ -4,6 +4,7 @@ import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { getDb } from "@/lib/db";
 import type { AdBrief } from "./brief";
 import { buildAdGraph, RECURSION_LIMIT } from "./graph";
+import { notifyRunStatus } from "./notify";
 import type { HookDecision, RenderResult, VideoDecision } from "./schemas";
 
 let saver: Promise<PostgresSaver> | null = null;
@@ -66,10 +67,11 @@ async function advance(runId: string, input: Parameters<Awaited<ReturnType<typeo
     const result = await graph.invoke(input, { ...config, recursionLimit: RECURSION_LIMIT });
     const snap = await graph.getState(config);
     const node = snap.tasks.find((t) => t.interrupts.length > 0)?.name as PausedAt | undefined;
+    const status = node ? STATUS_AT[node] : (result.outcome ?? "failed");
     await db
       .from("ad_runs")
       .update({
-        status: node ? STATUS_AT[node] : (result.outcome ?? "failed"),
+        status,
         hooks_json: { hooks: result.hooks, trail: result.trail, critique: result.feedback },
         chosen_hook: result.chosenHook ?? null,
         storyboard_json: result.storyboard ? { storyboard: result.storyboard, trailer: result.trailer } : null,
@@ -80,15 +82,16 @@ async function advance(runId: string, input: Parameters<Awaited<ReturnType<typeo
         updated_at: new Date().toISOString(),
       })
       .eq("id", runId);
+    await notifyRunStatus({ runId, status, caseTitle: result.brief.title, videoUrl: result.videoUrl });
   } catch (err) {
     console.error(`[ads] run ${runId} failed:`, err);
+    const error = err instanceof Error ? err.message.slice(0, 1000) : String(err);
     await db
       .from("ad_runs")
-      .update({
-        status: "failed",
-        error: err instanceof Error ? err.message.slice(0, 1000) : String(err),
-        updated_at: new Date().toISOString(),
-      })
+      .update({ status: "failed", error, updated_at: new Date().toISOString() })
       .eq("id", runId);
+    const { data } = await db.from("ad_runs").select("cases(brief_json->>title)").eq("id", runId).maybeSingle();
+    const caseTitle = (data?.cases as unknown as { title?: string } | null)?.title ?? "Unknown case";
+    await notifyRunStatus({ runId, status: "failed", caseTitle, error });
   }
 }

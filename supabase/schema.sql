@@ -34,7 +34,16 @@ create table if not exists worker_heartbeat (
   worker_last_seen  timestamptz not null default now()
 );
 
+-- Current public n8n URL. The quick tunnel's URL changes on every restart;
+-- n8n's tunnel-sync container saves the new one via POST /api/ads/n8n-endpoint.
+create table if not exists n8n_endpoint (
+  id          text primary key default 'n8n',
+  base_url    text not null,
+  updated_at  timestamptz not null default now()
+);
+
 -- Server uses the service-role key; lock everything else out.
 alter table cases enable row level security;
 alter table ad_runs enable row level security;
 alter table worker_heartbeat enable row level security;
+alter table n8n_endpoint enable row level security;

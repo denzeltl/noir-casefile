@@ -10,6 +10,7 @@ import { spawn } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { notifyRunStatus } from "../src/lib/ads/notify.ts";
 
 const POLL_MS = 10_000;
 const HEARTBEAT_MS = 30_000;
@@ -42,7 +43,7 @@ async function heartbeat() {
 }
 
 /** Claim the oldest renderable run. The status filter in the update makes the claim atomic. */
-async function claim(): Promise<{ id: string; trailer: Record<string, string> } | null> {
+async function claim(): Promise<{ id: string; trailer: Record<string, string>; title: string } | null> {
   const stale = new Date(Date.now() - STALE_CLAIM_MS).toISOString();
   const ready = `status.eq.waiting_render,and(status.eq.rendering,claimed_at.lt.${stale})`;
   const { data: next, error } = await db
@@ -60,12 +61,13 @@ async function claim(): Promise<{ id: string; trailer: Record<string, string> } 
     .update({ status: "rendering", claimed_at: now, updated_at: now })
     .eq("id", next[0].id)
     .or(ready)
-    .select("id, storyboard_json");
+    .select("id, storyboard_json, cases(brief_json->>title)");
   if (claimError) throw new Error(claimError.message);
   if (!won?.length) return null; // someone else got it
   const trailer = (won[0].storyboard_json as { trailer?: Record<string, string> } | null)?.trailer;
   if (!trailer) throw Object.assign(new Error("Run has no trailer variables."), { runId: won[0].id });
-  return { id: won[0].id, trailer };
+  const title = (won[0].cases as unknown as { title?: string } | null)?.title ?? "Unknown case";
+  return { id: won[0].id, trailer, title };
 }
 
 function run(cmd: string, args: string[], timeoutMs: number): Promise<string> {
@@ -126,13 +128,14 @@ async function resume(id: string, videoUrl: string) {
   if (!res.ok) throw new Error(`Resume answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
 }
 
-async function fail(id: string, err: unknown) {
+async function fail(id: string, err: unknown, caseTitle = "Unknown case") {
   const message = err instanceof Error ? err.message : String(err);
   log(`run ${id} failed: ${message}`);
   await db
     .from("ad_runs")
     .update({ status: "render_failed", error: message.slice(0, 1000), claimed_at: null, updated_at: new Date().toISOString() })
     .eq("id", id);
+  await notifyRunStatus({ runId: id, status: "render_failed", caseTitle, error: message });
 }
 
 /** One pass: claim, render, upload, resume. Returns whether a run was handled. */
@@ -155,7 +158,7 @@ async function tick(): Promise<boolean> {
     await resume(job.id, url);
     log(`done ${job.id} in ${((Date.now() - started) / 1000).toFixed(0)}s → ${url}`);
   } catch (err) {
-    await fail(job.id, err);
+    await fail(job.id, err, job.title);
   }
   return true;
 }

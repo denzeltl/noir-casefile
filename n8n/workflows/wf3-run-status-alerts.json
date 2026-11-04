@@ -1,0 +1,83 @@
+{
+  "name": "Noir Ad Studio · WF3 Run status alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ad-status",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "26c589fe-4659-68cb-a19d-7b0cba831f27",
+      "name": "Run status (from app)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "cd2bc4dd-9b05-1960-c7c1-b82895415847"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tg = (method, body) => this.helpers.httpRequest({\n  method: \"POST\",\n  url: \"https://api.telegram.org/bot\" + $env.TELEGRAM_BOT_TOKEN + \"/\" + method,\n  body, json: true,\n});\nconst app = (method, path, body) => this.helpers.httpRequest({\n  method,\n  url: $env.AD_STUDIO_URL.replace(/\\/$/, \"\") + path,\n  headers: { \"x-n8n-secret\": $env.N8N_SHARED_SECRET },\n  body, json: true,\n});\n// A webhook call must carry the shared secret (the app sends it on every alert).\nconst fromApp = (req) => req.headers[\"x-n8n-secret\"] === $env.N8N_SHARED_SECRET;\nconst caseButtons = (caseId) => ({\n  inline_keyboard: [[\n    { text: \"Create ad\", callback_data: \"create:\" + caseId },\n    { text: \"Skip\", callback_data: \"skip:\" + caseId },\n  ]],\n});\n\nconst req = $input.first().json;\nif (!fromApp(req)) return [];\nconst r = req.body;\nconst lines = {\n  waiting_hook: \"Hooks are ready. Pick one:\",\n  waiting_video: \"The trailer is rendered. Approve, re-render or discard:\",\n  ready_to_post: \"Approved and ready to post. Download it from:\",\n  render_failed: \"The render failed: \" + (r.error || \"no error recorded\") + \"\\nRetry from:\",\n  failed: \"The run failed: \" + (r.error || \"no error recorded\") + \"\\nOpen:\",\n};\nconst text = r.caseTitle + \"\\n\" + (lines[r.status] || r.status) + \"\\n\" + r.adminUrl;\n// Attach the preview when a video needs a decision (Telegram fetches it by URL, up to 20 MB).\nconst withVideo = r.status === \"waiting_video\" && r.videoUrl;\nreturn [{\n  json: {\n    method: withVideo ? \"sendVideo\" : \"sendMessage\",\n    payload: withVideo\n      ? { chat_id: $env.TELEGRAM_CHAT_ID, video: r.videoUrl, caption: text, supports_streaming: true }\n      : { chat_id: $env.TELEGRAM_CHAT_ID, text, link_preview_options: { is_disabled: true } },\n  },\n}];\n"
+      },
+      "id": "2bc448b9-248f-c445-38ff-a94a70f3d090",
+      "name": "Build message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/' + $json.method }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {}
+      },
+      "id": "ed13b24a-3762-3934-831f-83d8958dc5b8",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run status (from app)": {
+      "main": [
+        [
+          {
+            "node": "Build message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build message": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false,
+  "id": "140aabbf6f70926a"
+}

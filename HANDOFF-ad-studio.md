@@ -86,7 +86,7 @@ Self-host n8n in Docker on the same PC as the render worker. Telegram and Supaba
 - Optional: LangSmith free tier for tracing (`LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY`)
 
 Env vars (add to `.env.example`, values in `.env.local`):
-`GOOGLE_API_KEY`, `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, `N8N_SHARED_SECRET`, `N8N_STATUS_WEBHOOK_URL`, plus the existing Groq keys. In n8n: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
+`GOOGLE_API_KEY`, `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, `N8N_SHARED_SECRET`, plus the existing Groq keys. In n8n: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
 
 Check the current Groq and Gemini free-tier models and rate limits on their sites before choosing model names. Keep model names in one config file, not scattered through nodes.
 

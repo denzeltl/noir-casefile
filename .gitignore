@@ -47,3 +47,8 @@ next-env.d.ts
 /tmp/
 /video/.hyperframes/
 /video/renders/
+
+# n8n local config (has the bot token)
+/n8n/.env
+!.env.example
+!n8n/.env.example

@@ -1,0 +1,54 @@
+{
+  "name": "Noir Ad Studio · WF1 New case alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-case",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "429f26a0-90a5-e203-d051-9cbb4ab167b9",
+      "name": "New case (from app)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "0a759b5d-a5cb-5ef3-3926-14988b67d96e"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tg = (method, body) => this.helpers.httpRequest({\n  method: \"POST\",\n  url: \"https://api.telegram.org/bot\" + $env.TELEGRAM_BOT_TOKEN + \"/\" + method,\n  body, json: true,\n});\nconst app = (method, path, body) => this.helpers.httpRequest({\n  method,\n  url: $env.AD_STUDIO_URL.replace(/\\/$/, \"\") + path,\n  headers: { \"x-n8n-secret\": $env.N8N_SHARED_SECRET },\n  body, json: true,\n});\n// A webhook call must carry the shared secret (the app sends it on every alert).\nconst fromApp = (req) => req.headers[\"x-n8n-secret\"] === $env.N8N_SHARED_SECRET;\nconst caseButtons = (caseId) => ({\n  inline_keyboard: [[\n    { text: \"Create ad\", callback_data: \"create:\" + caseId },\n    { text: \"Skip\", callback_data: \"skip:\" + caseId },\n  ]],\n});\n\nconst req = $input.first().json;\nif (!fromApp(req)) return [];\nconst c = req.body;\n// Optional filter, e.g. ALERT_DIFFICULTIES=hard,noir. Unset = every case.\nconst only = ($env.ALERT_DIFFICULTIES || \"\").split(\",\").map((s) => s.trim()).filter(Boolean);\nif (only.length && !only.includes(c.difficulty)) return [];\n\nawait tg(\"sendMessage\", {\n  chat_id: $env.TELEGRAM_CHAT_ID,\n  text: \"New case opened\\n\\n\" + c.title + \"\\n\" + c.setting + \"\\nDifficulty: \" + c.difficulty + \"\\n\\n\" + c.adminUrl,\n  reply_markup: caseButtons(c.caseId),\n  link_preview_options: { is_disabled: true },\n});\n// Mark it so the catch-up digest doesn't send it again.\nawait app(\"POST\", \"/api/ads/alerts/cases\", { caseIds: [c.caseId] });\nreturn [{ json: { alerted: c.caseId } }];\n"
+      },
+      "id": "fa13ca8c-1e61-ffec-0041-4bf256220027",
+      "name": "Send alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New case (from app)": {
+      "main": [
+        [
+          {
+            "node": "Send alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false,
+  "id": "bf5585d0b221099b"
+}

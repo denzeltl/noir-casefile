@@ -1,0 +1,60 @@
+# n8n + Cloudflare Tunnel for the Noir Casefile Ad Studio.
+#   docker compose -f n8n/docker-compose.yml --env-file n8n/.env up -d
+# n8n keeps its data (workflows, executions) in the n8n_data volume.
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.46.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678" # local only; the outside world comes in through the tunnel
+    env_file: .env
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PROTOCOL=http
+      # IPv6 is unroutable in Docker Desktop, and Telegram (~300 ms away) loses
+      # the race against Node's 250 ms happy-eyeballs cutoff. Use IPv4, no race.
+      - NODE_OPTIONS=--dns-result-order=ipv4first --no-network-family-autoselection
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro # for `n8n import:workflow --separate --input=/workflows`
+
+  # Quick tunnel (default): a free random https://*.trycloudflare.com URL, no
+  # domain needed. It changes whenever this container restarts; tunnel-sync
+  # below notices and re-points Telegram and the app on its own.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.0
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:2000 --url http://n8n:5678
+    depends_on:
+      - n8n
+
+  # Watches the quick tunnel's URL. On every change it re-registers the
+  # Telegram webhook and saves the URL in the app (POST /api/ads/n8n-endpoint),
+  # so nothing needs editing or redeploying after a PC restart.
+  tunnel-sync:
+    image: node:22-alpine
+    restart: unless-stopped
+    command: node /sync/tunnel-sync.mjs
+    env_file: .env
+    environment:
+      - TUNNEL_METRICS_URL=http://cloudflared:2000
+      - NODE_OPTIONS=--dns-result-order=ipv4first --no-network-family-autoselection
+    volumes:
+      - ./tunnel-sync.mjs:/sync/tunnel-sync.mjs:ro
+    depends_on:
+      - cloudflared
+
+  # Named tunnel instead (needs a domain on Cloudflare): stop the two services
+  # above, set CLOUDFLARE_TUNNEL_TOKEN and run with `--profile named`.
+  cloudflared-named:
+    image: cloudflare/cloudflared:2026.10.0
+    profiles: ["named"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_data:
