@@ -44,6 +44,11 @@ export const AdState = Annotation.Root({
 
 type State = typeof AdState.State;
 
+/** One timeline entry: "node:detail@ISO time". Parsed by src/lib/admin-data.ts. */
+export function step(node: string, detail: string): string {
+  return `${node}:${detail}@${new Date().toISOString()}`;
+}
+
 const WRITER_SYSTEM = `You write scroll-stopping hooks for 15-second vertical (9:16) trailers for "Noir Casefile", a browser murder-mystery game where you interrogate AI suspects.
 Rules:
 - Hardboiled noir voice. Concrete images from the brief, no generic clichés.
@@ -71,7 +76,7 @@ async function hookWriter(state: State): Promise<Partial<State>> {
   return {
     hooks: data.hooks.map((h: Hook) => ({ ...h, score: 0, feedback: "" })),
     loops: state.loops + 1,
-    trail: [`hookWriter:${model}`],
+    trail: [step("hookWriter", model)],
   };
 }
 
@@ -94,7 +99,7 @@ async function critic(state: State): Promise<Partial<State>> {
   return {
     hooks: scored,
     feedback: `${data.summary}\n${notes}`,
-    trail: [`critic:${model}`],
+    trail: [step("critic", model)],
   };
 }
 
@@ -119,14 +124,14 @@ export function applyHookDecision(state: State, decision: HookDecision): Partial
     return {
       feedback: `The producer asked for a rewrite: ${decision.note}\n\nLast critique:\n${state.feedback ?? "none"}`,
       chosenHook: null,
-      trail: ["pickHook:rewrite"],
+      trail: [step("pickHook", "rewrite")],
     };
   }
   const hook = state.hooks.find((h) => h.id === decision.hookId);
   if (!hook) throw new Error(`Unknown hook id ${decision.hookId}`);
   const chosen =
     decision.action === "edit" ? { ...hook, hook: decision.hook, script: decision.script } : hook;
-  return { chosenHook: chosen, trail: [`pickHook:${decision.action}`] };
+  return { chosenHook: chosen, trail: [step("pickHook", decision.action)] };
 }
 
 // A rewrite is one extra pass even when the auto-loop budget is spent.
@@ -156,7 +161,7 @@ async function storyboardWriter(state: State): Promise<Partial<State>> {
   return {
     storyboard: data,
     trailer: toTrailerVariables(data, state.brief),
-    trail: [`storyboardWriter:${model}`],
+    trail: [step("storyboardWriter", model)],
   };
 }
 
@@ -168,7 +173,7 @@ async function storyboardWriter(state: State): Promise<Partial<State>> {
  */
 async function render(state: State): Promise<Partial<State>> {
   const result = RenderResultSchema.parse(interrupt({ kind: "render", trailer: state.trailer }));
-  return { videoUrl: result.videoUrl, trail: ["render:done"] };
+  return { videoUrl: result.videoUrl, trail: [step("render", "done")] };
 }
 
 /** Interrupt #2: pause until the admin approves, re-renders or discards the video. */
@@ -178,7 +183,7 @@ async function approveVideo(state: State): Promise<Partial<State>> {
 }
 
 export function applyVideoDecision(decision: VideoDecision): Partial<State> {
-  const trail = [`approveVideo:${decision.action}`];
+  const trail = [step("approveVideo", decision.action)];
   if (decision.action === "approve") return { outcome: "ready_to_post", trail };
   if (decision.action === "discard") return { outcome: "discarded", trail };
   // Same storyboard, fresh render: back to the render pause for the worker.

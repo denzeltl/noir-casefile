@@ -1,6 +1,7 @@
 import "server-only";
 import { Command } from "@langchain/langgraph";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import pg from "pg";
 import { getDb } from "@/lib/db";
 import type { AdBrief } from "./brief";
 import { buildAdGraph, RECURSION_LIMIT } from "./graph";
@@ -14,8 +15,14 @@ function getCheckpointer(): Promise<PostgresSaver> {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL isn't set, so runs can't pause and resume.");
   saver ??= (async () => {
-    const s = PostgresSaver.fromConnString(url);
-    await s.setup();
+    // Time out instead of waiting forever when the database doesn't answer:
+    // the run then fails with a clear error and can be retried from the admin.
+    const pool = new pg.Pool({ connectionString: url, connectionTimeoutMillis: 15_000, query_timeout: 30_000 });
+    const s = new PostgresSaver(pool);
+    await s.setup().catch((err) => {
+      void pool.end();
+      throw new Error(`Couldn't reach the run database (DATABASE_URL): ${err instanceof Error ? err.message : err}`);
+    });
     return s;
   })().catch((err) => {
     saver = null;
@@ -36,6 +43,19 @@ export function startRun(runId: string, brief: AdBrief) {
 /** Answer whichever interrupt the run is paused at and run to the next pause. */
 export function resumeRun(runId: string, answer: HookDecision | RenderResult | VideoDecision) {
   return advance(runId, new Command({ resume: answer }));
+}
+
+/** A "running" run with no update for this long is treated as stalled and may be retried. */
+export const STALL_MS = 10 * 60_000;
+
+/**
+ * Retry a run whose graph failed. With a checkpoint, invoking with null re-runs
+ * the node that threw (earlier work is kept). Without one, start from the brief.
+ */
+export async function retryRun(runId: string, brief: AdBrief) {
+  // If the checkpoint can't be read, advance() hits the same error and marks the run failed.
+  const snap = await (await getGraph()).getState({ configurable: { thread_id: runId } }).catch(() => null);
+  return !snap || snap.values?.brief ? advance(runId, null) : startRun(runId, brief);
 }
 
 export type PausedAt = "pickHook" | "render" | "approveVideo" | null;
@@ -86,12 +106,28 @@ async function advance(runId: string, input: Parameters<Awaited<ReturnType<typeo
   } catch (err) {
     console.error(`[ads] run ${runId} failed:`, err);
     const error = err instanceof Error ? err.message.slice(0, 1000) : String(err);
+    // Keep the timeline up to the failure and name the node that threw.
+    const failed = await failurePoint(runId).catch(() => null);
+    const { data: prev } = await db.from("ad_runs").select("hooks_json").eq("id", runId).maybeSingle();
     await db
       .from("ad_runs")
-      .update({ status: "failed", error, updated_at: new Date().toISOString() })
+      .update({
+        status: "failed",
+        error,
+        hooks_json: failed
+          ? { ...(prev?.hooks_json ?? {}), trail: failed.trail, failedNode: failed.node, failedAt: new Date().toISOString() }
+          : prev?.hooks_json ?? null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", runId);
     const { data } = await db.from("ad_runs").select("cases(brief_json->>title)").eq("id", runId).maybeSingle();
     const caseTitle = (data?.cases as unknown as { title?: string } | null)?.title ?? "Unknown case";
     await notifyRunStatus({ runId, status: "failed", caseTitle, error });
   }
+}
+
+/** The last checkpoint's trail and the node that was due next (the one that threw). */
+async function failurePoint(runId: string) {
+  const snap = await (await getGraph()).getState({ configurable: { thread_id: runId } });
+  return { trail: (snap.values?.trail as string[] | undefined) ?? [], node: snap.next[0] ?? "hookWriter" };
 }

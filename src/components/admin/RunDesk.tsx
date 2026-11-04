@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminRun } from "@/lib/admin-data";
 import { PASS_SCORE, type HookDecision, type VideoDecision } from "@/lib/ads/schemas";
+import RunTimeline from "./RunTimeline";
 
 const STAMP: Record<string, { label: string; className: string }> = {
   waiting_hook: { label: "Needs you", className: "border-pen text-pen" },
@@ -51,16 +52,7 @@ export default function RunDesk({ run }: { run: AdminRun }) {
           {stamp.label}
         </span>
       </div>
-      {run.trail.length > 0 && (
-        <p className="label mt-4 flex flex-wrap gap-x-1.5 gap-y-1">
-          {run.trail.map((step, i) => (
-            <span key={i}>
-              {i > 0 && <span className="mr-1.5 text-clip">→</span>}
-              {step}
-            </span>
-          ))}
-        </p>
-      )}
+      <RunTimeline run={run} />
       {run.loops > 0 && (
         <p className="label mt-1.5 tabular-nums text-ink">
           {run.loops} {run.loops === 1 ? "draft" : "drafts"} by the writer
@@ -71,11 +63,32 @@ export default function RunDesk({ run }: { run: AdminRun }) {
         {waiting ? (
           <HookDesk run={run} />
         ) : run.status === "failed" ? (
-          <StatusSheet label="The run failed" tone="error">
-            {run.error ?? "No error was recorded."} Start a new ad for this case from the register.
-          </StatusSheet>
+          <RetrySheet
+            run={run}
+            label="The run failed"
+            hint="Retry runs the failed step again and keeps everything before it."
+            endpoint="retry"
+            action="Retry run"
+            pendingText="Restarting…"
+          />
+        ) : run.stalled ? (
+          <RetrySheet
+            run={{ ...run, error: "No progress for over 10 minutes. The server probably restarted or hung partway through a step." }}
+            label="The run stalled"
+            hint="Retry runs the stuck step again and keeps everything before it."
+            endpoint="retry"
+            action="Retry run"
+            pendingText="Restarting…"
+          />
         ) : run.status === "render_failed" ? (
-          <RenderFailed run={run} />
+          <RetrySheet
+            run={run}
+            label="The render failed"
+            hint="Retry puts the same storyboard back in the render worker's queue."
+            endpoint="retry-render"
+            action="Retry render"
+            pendingText="Queuing…"
+          />
         ) : run.status === "waiting_render" || run.status === "rendering" ? (
           <StatusSheet label={run.status === "rendering" ? "Rendering the trailer" : "Waiting for the render worker"}>
             {run.status === "rendering"
@@ -222,7 +235,16 @@ function WorkerStatus({ online, lastSeen }: { online: boolean; lastSeen: string 
   );
 }
 
-function RenderFailed({ run }: { run: AdminRun }) {
+/** Failed graph or failed render: what went wrong, what retry will do, and the button. */
+function RetrySheet(props: {
+  run: AdminRun;
+  label: string;
+  hint: string;
+  endpoint: "retry" | "retry-render";
+  action: string;
+  pendingText: string;
+}) {
+  const { run } = props;
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -231,10 +253,10 @@ function RenderFailed({ run }: { run: AdminRun }) {
     setPending(true);
     setNotice(null);
     try {
-      const res = await fetch(`/api/ads/runs/${run.id}/retry-render`, { method: "POST" });
+      const res = await fetch(`/api/ads/runs/${run.id}/${props.endpoint}`, { method: "POST" });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setNotice(body.error ?? `The studio answered ${res.status}.`);
+        setNotice(body.error ?? `The studio answered ${res.status}. Try again in a moment.`);
         setPending(false);
         return;
       }
@@ -247,18 +269,20 @@ function RenderFailed({ run }: { run: AdminRun }) {
 
   return (
     <div role="alert" className="sheet pane-in px-6 py-8">
-      <p className="label text-pen">The render failed</p>
+      <p className="label text-pen">{props.label}</p>
       <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed [overflow-wrap:anywhere]">
         {run.error ?? "No error was recorded."}
       </p>
+      <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-muted">{props.hint}</p>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           type="button"
           disabled={pending}
+          aria-busy={pending}
           onClick={retry}
           className="btn btn-ink min-h-11 cursor-pointer rounded-md px-5 font-mono text-[13px] font-semibold uppercase disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {pending ? "Queuing…" : "Retry render"}
+          {pending ? props.pendingText : props.action}
         </button>
         {notice && <span className="text-[15px] text-pen" aria-live="polite">{notice}</span>}
       </div>

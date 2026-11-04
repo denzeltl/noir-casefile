@@ -52,3 +52,5 @@ next-env.d.ts
 /n8n/.env
 !.env.example
 !n8n/.env.example
+
+.elan/

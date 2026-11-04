@@ -87,13 +87,37 @@ export async function listAdminCases(): Promise<AdminCaseRow[] | null> {
   });
 }
 
+/** One node the graph ran. `at` is null for entries written before timestamps. */
+export interface TimelineStep {
+  node: string;
+  detail: string;
+  at: string | null;
+}
+
+/** Parse "node:detail@ISO" (or the older "node:detail"). */
+export function parseStep(raw: string): TimelineStep {
+  const atIdx = raw.lastIndexOf("@");
+  const head = atIdx > 0 ? raw.slice(0, atIdx) : raw;
+  const at = atIdx > 0 ? raw.slice(atIdx + 1) : null;
+  const colon = head.indexOf(":");
+  return colon < 0
+    ? { node: head, detail: "", at }
+    : { node: head.slice(0, colon), detail: head.slice(colon + 1), at };
+}
+
 export interface AdminRun {
   id: string;
   status: string;
   caseTitle: string;
   setting: string;
   hooks: ScoredHook[];
-  trail: string[];
+  trail: TimelineStep[];
+  /** Node that threw, for a failed run (null for older runs or other statuses). */
+  failedNode: string | null;
+  failedAt: string | null;
+  createdAt: string;
+  /** "running" with no progress for 10 min: the server likely restarted mid-step. */
+  stalled: boolean;
   /** The critic's one-line direction (first line of its feedback). */
   critique: string | null;
   chosenHook: ScoredHook | null;
@@ -106,6 +130,8 @@ export interface AdminRun {
   workerOnline: boolean;
 }
 
+// Same as STALL_MS in src/lib/ads/runner.ts (not imported: that module loads LangGraph).
+const STALL_MS = 10 * 60_000;
 const WORKER_ONLINE_MS = 2 * 60_000;
 
 /** One run for /admin/runs/[id]. Brief fields only, never case_json. Null if missing. */
@@ -115,7 +141,7 @@ export async function getAdminRun(id: string): Promise<AdminRun | null> {
   const [{ data, error }, beat] = await Promise.all([
     db
       .from("ad_runs")
-      .select("id, status, hooks_json, chosen_hook, loops, error, video_url, cases(brief_json)")
+      .select("id, status, hooks_json, chosen_hook, loops, error, video_url, created_at, updated_at, cases(brief_json)")
       .eq("id", id)
       .maybeSingle(),
     db.from("worker_heartbeat").select("worker_last_seen").eq("id", "render-worker").maybeSingle(),
@@ -124,14 +150,24 @@ export async function getAdminRun(id: string): Promise<AdminRun | null> {
   if (!data) return null;
 
   const brief = (data.cases as unknown as { brief_json: AdBrief } | null)?.brief_json;
-  const hooks = (data.hooks_json ?? {}) as { hooks?: ScoredHook[]; trail?: string[]; critique?: string };
+  const hooks = (data.hooks_json ?? {}) as {
+    hooks?: ScoredHook[];
+    trail?: string[];
+    critique?: string;
+    failedNode?: string;
+    failedAt?: string;
+  };
   return {
     id: data.id,
     status: data.status,
     caseTitle: brief?.title ?? "Untitled case",
     setting: brief?.setting ?? "",
     hooks: hooks.hooks ?? [],
-    trail: (hooks.trail ?? []).map((t) => t.split(":")[0]),
+    trail: (hooks.trail ?? []).map(parseStep),
+    failedNode: data.status === "failed" ? (hooks.failedNode ?? null) : null,
+    failedAt: data.status === "failed" ? (hooks.failedAt ?? null) : null,
+    createdAt: data.created_at,
+    stalled: data.status === "running" && Date.now() - new Date(data.updated_at).getTime() > STALL_MS,
     critique: hooks.critique?.split("\n")[0] || null,
     chosenHook: (data.chosen_hook as ScoredHook | null) ?? null,
     loops: data.loops,
