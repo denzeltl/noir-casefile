@@ -44,6 +44,7 @@ components:
   label: "Mono, 12px, uppercase, muted."
   stamp: "Mono 600, accent-ink, 2px border, rotated -8deg, letter-spacing .12em; never a filled block."
   clue-card: "Sheet with a 4px left border in its highlighter colour (rule when unmarked). Pulls forward (translateX(-6px) + deeper shadow) when cited."
+  run-log: "Admin run timeline. Sheet with a mono LABEL heading; one row per graph step: tabular mono time | serif step name | mono model, divided by rule lines. A failed step is a row in accent-ink (red pen). Stacks the model under the step name below sm."
   tab: "Paper index tabs; the active tab is the sheet in front (surface, no bottom border)."
 ---
 

@@ -42,3 +42,18 @@ next-env.d.ts
 
 # elan scratch (briefs, prototypes, screenshots)
 /.elan/
+
+# Ad Studio render worker output and HyperFrames scratch
+/tmp/
+/video/.hyperframes/
+/video/renders/
+
+# n8n local config (has the bot token)
+/n8n/.env
+!.env.example
+!n8n/.env.example
+
+.elan/
+
+# Render worker short-cut copies (deleted after each render)
+video/_cut-*.html

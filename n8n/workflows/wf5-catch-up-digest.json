@@ -1,0 +1,83 @@
+{
+  "name": "Noir Ad Studio · Catch-up digest",
+  "nodes": [
+    {
+      "parameters": {
+        "events": [
+          "init"
+        ]
+      },
+      "id": "5da33324-01aa-f3d4-8fb2-9d5a5f8fe102",
+      "name": "When n8n starts",
+      "type": "n8n-nodes-base.n8nTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "c7bafbc9-7b09-620d-0881-ae18e98f437e",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tg = (method, body) => this.helpers.httpRequest({\n  method: \"POST\",\n  url: \"https://api.telegram.org/bot\" + $env.TELEGRAM_BOT_TOKEN + \"/\" + method,\n  body, json: true,\n});\nconst app = (method, path, body) => this.helpers.httpRequest({\n  method,\n  url: $env.AD_STUDIO_URL.replace(/\\/$/, \"\") + path,\n  headers: { \"x-n8n-secret\": $env.N8N_SHARED_SECRET },\n  body, json: true,\n});\n// A webhook call must carry the shared secret (the app sends it on every alert).\nconst fromApp = (req) => req.headers[\"x-n8n-secret\"] === $env.N8N_SHARED_SECRET;\nconst caseButtons = (caseId) => ({\n  inline_keyboard: [[\n    { text: \"Create ad\", callback_data: \"create:\" + caseId },\n    { text: \"Skip\", callback_data: \"skip:\" + caseId },\n  ]],\n});\n\nconst { cases, adminUrl } = await app(\"GET\", \"/api/ads/alerts/cases\");\nconst fresh = cases.filter((c) => !c.hasAd);\nconst ids = cases.map((c) => c.caseId);\nif (!fresh.length) {\n  if (ids.length) await app(\"POST\", \"/api/ads/alerts/cases\", { caseIds: ids });\n  return [];\n}\nif (fresh.length === 1) {\n  const c = fresh[0];\n  await tg(\"sendMessage\", {\n    chat_id: $env.TELEGRAM_CHAT_ID,\n    text: \"New case opened\\n\\n\" + c.title + \"\\n\" + c.setting + \"\\nDifficulty: \" + c.difficulty + \"\\n\\n\" + adminUrl,\n    reply_markup: caseButtons(c.caseId),\n    link_preview_options: { is_disabled: true },\n  });\n} else {\n  // One message for the lot, with a Create ad button per case (Telegram allows plenty of rows).\n  const shown = fresh.slice(0, 10);\n  await tg(\"sendMessage\", {\n    chat_id: $env.TELEGRAM_CHAT_ID,\n    text: fresh.length + \" new games while you were away:\\n\\n\" +\n      shown.map((c, i) => (i + 1) + \". \" + c.title + \" (\" + c.difficulty + \")\").join(\"\\n\") +\n      (fresh.length > shown.length ? \"\\n…and \" + (fresh.length - shown.length) + \" more\" : \"\") +\n      \"\\n\\n\" + adminUrl,\n    reply_markup: { inline_keyboard: shown.map((c, i) => [{ text: \"Create ad #\" + (i + 1), callback_data: \"create:\" + c.caseId }]) },\n    link_preview_options: { is_disabled: true },\n  });\n}\nawait app(\"POST\", \"/api/ads/alerts/cases\", { caseIds: ids });\nreturn [{ json: { sent: fresh.length } }];\n"
+      },
+      "id": "39fa95ad-d9ad-eb79-833d-be532912d06a",
+      "name": "Send digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "When n8n starts": {
+      "main": [
+        [
+          {
+            "node": "Send digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Send digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false,
+  "id": "78296773bf1ad034"
+}

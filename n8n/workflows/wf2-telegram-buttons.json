@@ -1,0 +1,54 @@
+{
+  "name": "Noir Ad Studio · WF2 Telegram button handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "9eff0420-c692-c983-5f6e-baa9fc014553",
+      "name": "Telegram update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "5e705223-fee8-827c-aa9c-1857ec874f90"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tg = (method, body) => this.helpers.httpRequest({\n  method: \"POST\",\n  url: \"https://api.telegram.org/bot\" + $env.TELEGRAM_BOT_TOKEN + \"/\" + method,\n  body, json: true,\n});\nconst app = (method, path, body) => this.helpers.httpRequest({\n  method,\n  url: $env.AD_STUDIO_URL.replace(/\\/$/, \"\") + path,\n  headers: { \"x-n8n-secret\": $env.N8N_SHARED_SECRET },\n  body, json: true,\n});\n// A webhook call must carry the shared secret (the app sends it on every alert).\nconst fromApp = (req) => req.headers[\"x-n8n-secret\"] === $env.N8N_SHARED_SECRET;\nconst caseButtons = (caseId) => ({\n  inline_keyboard: [[\n    { text: \"Create ad\", callback_data: \"create:\" + caseId },\n    { text: \"Skip\", callback_data: \"skip:\" + caseId },\n  ]],\n});\n\nconst req = $input.first().json;\n// Telegram echoes the secret set with setWebhook; anything else is forged.\nif (req.headers[\"x-telegram-bot-api-secret-token\"] !== $env.TELEGRAM_WEBHOOK_SECRET) return [];\nconst q = req.body.callback_query;\nif (!q) return [];\n// Only my own chat may start runs.\nif (String(q.message?.chat?.id) !== String($env.TELEGRAM_CHAT_ID)) {\n  await tg(\"answerCallbackQuery\", { callback_query_id: q.id, text: \"Not allowed.\" });\n  return [];\n}\n\nconst [action, caseId] = String(q.data || \"\").split(\":\");\nlet note;\nif (action === \"create\") {\n  // The app returns the existing run on a double tap instead of starting another.\n  const res = await app(\"POST\", \"/api/ads/runs\", { caseIds: [caseId] });\n  const run = res.runs?.[0];\n  note = !run ? \"Couldn't start: \" + (res.errors?.[0]?.error || \"unknown error\")\n    : run.created ? \"Ad run started.\" : \"Already running (\" + run.status.replace(/_/g, \" \") + \").\";\n} else if (action === \"skip\") {\n  note = \"Skipped.\";\n} else {\n  return [];\n}\n\nawait tg(\"answerCallbackQuery\", { callback_query_id: q.id, text: note });\n// Replace the buttons with the outcome so the message can't be tapped again.\nawait tg(\"editMessageText\", {\n  chat_id: q.message.chat.id,\n  message_id: q.message.message_id,\n  text: q.message.text + \"\\n\\n→ \" + note,\n  link_preview_options: { is_disabled: true },\n});\nreturn [{ json: { action, caseId, note } }];\n"
+      },
+      "id": "f4bb5a2c-5a1a-3443-f6d3-6dac0967bce3",
+      "name": "Handle button",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram update": {
+      "main": [
+        [
+          {
+            "node": "Handle button",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false,
+  "id": "2933383b5e433b0b"
+}

@@ -1,0 +1,57 @@
+{
+  "name": "Noir Ad Studio · WF4 Worker offline alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "e36561ef-d1bb-e30f-e173-d0e67f75ddb3",
+      "name": "Every 10 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tg = (method, body) => this.helpers.httpRequest({\n  method: \"POST\",\n  url: \"https://api.telegram.org/bot\" + $env.TELEGRAM_BOT_TOKEN + \"/\" + method,\n  body, json: true,\n});\nconst app = (method, path, body) => this.helpers.httpRequest({\n  method,\n  url: $env.AD_STUDIO_URL.replace(/\\/$/, \"\") + path,\n  headers: { \"x-n8n-secret\": $env.N8N_SHARED_SECRET },\n  body, json: true,\n});\n// A webhook call must carry the shared secret (the app sends it on every alert).\nconst fromApp = (req) => req.headers[\"x-n8n-secret\"] === $env.N8N_SHARED_SECRET;\nconst caseButtons = (caseId) => ({\n  inline_keyboard: [[\n    { text: \"Create ad\", callback_data: \"create:\" + caseId },\n    { text: \"Skip\", callback_data: \"skip:\" + caseId },\n  ]],\n});\n\nconst w = await app(\"GET\", \"/api/ads/worker\");\n// Remember whether we already warned, so an outage sends one message, not one every 10 min.\nconst memo = $getWorkflowStaticData(\"global\");\nconst down = !w.online && w.waiting > 0;\nif (!down) {\n  if (memo.warned) {\n    memo.warned = false;\n    await tg(\"sendMessage\", { chat_id: $env.TELEGRAM_CHAT_ID, text: \"Render worker is back online.\" });\n  }\n  return [];\n}\nif (memo.warned) return [];\nmemo.warned = true;\nconst seen = w.lastSeen ? \"Last seen \" + new Date(w.lastSeen).toLocaleString() + \".\" : \"It has never checked in.\";\nawait tg(\"sendMessage\", {\n  chat_id: $env.TELEGRAM_CHAT_ID,\n  text: \"Render worker is offline, \" + w.waiting + (w.waiting === 1 ? \" run\" : \" runs\") + \" waiting. \" + seen + \"\\nStart it with: npm run render-worker\",\n});\nreturn [{ json: w }];\n"
+      },
+      "id": "4b6f17d7-25f3-d5da-5701-4344c870b698",
+      "name": "Check worker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every 10 minutes": {
+      "main": [
+        [
+          {
+            "node": "Check worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false,
+  "id": "7e6c73e3e6fb3049"
+}
