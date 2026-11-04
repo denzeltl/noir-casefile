@@ -3,6 +3,9 @@ import { getDb } from "@/lib/db";
 import { HookDecisionSchema, RenderResultSchema, VideoDecisionSchema } from "@/lib/ads/schemas";
 import { pausedAt, resumeRun } from "@/lib/ads/runner";
 
+// The graph runs in after() inside this function; give it Vercel's full window (writer/critic loops take minutes).
+export const maxDuration = 300;
+
 const PAUSES = {
   pickHook: {
     schema: HookDecisionSchema,

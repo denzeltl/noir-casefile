@@ -4,6 +4,9 @@ import { getDb } from "@/lib/db";
 import type { AdBrief } from "@/lib/ads/brief";
 import { startRun } from "@/lib/ads/runner";
 
+// The graph runs in after() inside this function; give it Vercel's full window (writer/critic loops take minutes).
+export const maxDuration = 300;
+
 const BodySchema = z.object({ caseIds: z.array(z.string().min(1)).min(1).max(20) });
 
 const ACTIVE = ["running", "waiting_hook", "waiting_render", "rendering", "render_failed", "waiting_video"];

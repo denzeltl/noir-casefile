@@ -3,6 +3,9 @@ import { getDb } from "@/lib/db";
 import type { AdBrief } from "@/lib/ads/brief";
 import { retryRun, STALL_MS } from "@/lib/ads/runner";
 
+// The graph runs in after() inside this function; give it Vercel's full window (writer/critic loops take minutes).
+export const maxDuration = 300;
+
 /**
  * POST /api/ads/runs/[id]/retry — re-runs a failed run from the node that threw.
  * Hooks already written and picks already made are kept (they're in the checkpoint).
