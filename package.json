@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "node --test src/**/*.test.ts",
     "ad-graph": "node --env-file=.env.local scripts/run-ad-graph.ts",
-    "render-worker": "node --env-file-if-exists=.env.worker --env-file-if-exists=.env.local scripts/render-worker.ts"
+    "render-worker": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.worker scripts/render-worker.ts"
   },
   "dependencies": {
     "@langchain/core": "^1.3.4",
