@@ -180,13 +180,24 @@ export default function CaseRegister({ cases }: { cases: AdminCaseRow[] }) {
                           Create ad
                         </button>
                       ) : (
-                        <a
-                          href={c.runId ? `/admin/runs/${c.runId}` : undefined}
-                          aria-disabled={!c.runId}
-                          className="btn btn-quiet inline-flex min-h-11 items-center whitespace-nowrap rounded-md px-4 font-mono text-[12px] uppercase tracking-[0.04em]"
-                        >
-                          Open run
-                        </a>
+                        <span className="inline-flex flex-wrap gap-2 lg:justify-end">
+                          {c.videoUrl && (
+                            <a
+                              href={c.videoUrl}
+                              download
+                              className="btn btn-ink inline-flex min-h-11 items-center whitespace-nowrap rounded-md px-4 font-mono text-[12px] font-semibold uppercase tracking-[0.04em]"
+                            >
+                              Download
+                            </a>
+                          )}
+                          <a
+                            href={c.runId ? `/admin/runs/${c.runId}` : undefined}
+                            aria-disabled={!c.runId}
+                            className="btn btn-quiet inline-flex min-h-11 items-center whitespace-nowrap rounded-md px-4 font-mono text-[12px] uppercase tracking-[0.04em]"
+                          >
+                            Open run
+                          </a>
+                        </span>
                       )}
                     </td>
                   </tr>

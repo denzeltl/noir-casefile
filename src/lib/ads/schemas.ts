@@ -79,6 +79,12 @@ export const RenderResultSchema = z.object({
   videoUrl: z.string().url(),
 });
 
+/** The admin's answer at interrupt #2, after watching the render. */
+export const VideoDecisionSchema = z.object({
+  action: z.enum(["approve", "rerender", "discard"]),
+});
+
 export type Motif = (typeof MOTIFS)[number];
 export type Storyboard = z.infer<typeof StoryboardSchema>;
 export type RenderResult = z.infer<typeof RenderResultSchema>;
+export type VideoDecision = z.infer<typeof VideoDecisionSchema>;

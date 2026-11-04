@@ -17,6 +17,8 @@ export interface AdminCaseRow {
   clues: number;
   ad: AdState;
   runId: string | null;
+  /** Set once the run's video is approved (ready to post). */
+  videoUrl: string | null;
 }
 
 const RUN_TO_STATE: Record<string, AdState> = {
@@ -56,14 +58,14 @@ export async function listAdminCases(): Promise<AdminCaseRow[] | null> {
       .limit(500),
     db
       .from("ad_runs")
-      .select("id, case_id, status, created_at")
+      .select("id, case_id, status, video_url, created_at")
       .order("created_at", { ascending: false }),
   ]);
   if (cases.error) throw new Error(cases.error.message);
   if (runs.error) throw new Error(runs.error.message);
 
   // Latest run per case decides its badge.
-  const latestRun = new Map<string, { id: string; status: string }>();
+  const latestRun = new Map<string, { id: string; status: string; video_url: string | null }>();
   for (const r of runs.data) if (!latestRun.has(r.case_id)) latestRun.set(r.case_id, r);
 
   return cases.data.map((c) => {
@@ -80,6 +82,7 @@ export async function listAdminCases(): Promise<AdminCaseRow[] | null> {
       clues: brief.clues.length,
       ad: run ? (RUN_TO_STATE[run.status] ?? "running") : "none",
       runId: run && run.status !== "discarded" ? run.id : null,
+      videoUrl: run?.status === "ready_to_post" ? run.video_url : null,
     };
   });
 }

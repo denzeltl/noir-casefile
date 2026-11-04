@@ -8,7 +8,9 @@ import {
   PASS_SCORE,
   RenderResultSchema,
   StoryboardSchema,
+  VideoDecisionSchema,
   type Storyboard,
+  type VideoDecision,
   type Hook,
   type HookDecision,
   type ScoredHook,
@@ -34,6 +36,8 @@ export const AdState = Annotation.Root({
   // What the render worker feeds the HyperFrames template.
   trailer: Annotation<TrailerVariables | null>({ reducer: (_, next) => next, default: () => null }),
   videoUrl: Annotation<string | null>({ reducer: (_, next) => next, default: () => null }),
+  // How the run ended at interrupt #2; null while it is still going.
+  outcome: Annotation<"ready_to_post" | "discarded" | null>({ reducer: (_, next) => next, default: () => null }),
   // Node-by-node trail for the admin timeline.
   trail: Annotation<string[]>({ reducer: (a, b) => a.concat(b), default: () => [] }),
 });
@@ -167,6 +171,24 @@ async function render(state: State): Promise<Partial<State>> {
   return { videoUrl: result.videoUrl, trail: ["render:done"] };
 }
 
+/** Interrupt #2: pause until the admin approves, re-renders or discards the video. */
+async function approveVideo(state: State): Promise<Partial<State>> {
+  const decision = VideoDecisionSchema.parse(interrupt({ kind: "approve_video", videoUrl: state.videoUrl }));
+  return applyVideoDecision(decision);
+}
+
+export function applyVideoDecision(decision: VideoDecision): Partial<State> {
+  const trail = [`approveVideo:${decision.action}`];
+  if (decision.action === "approve") return { outcome: "ready_to_post", trail };
+  if (decision.action === "discard") return { outcome: "discarded", trail };
+  // Same storyboard, fresh render: back to the render pause for the worker.
+  return { videoUrl: null, trail };
+}
+
+function afterApprove(state: State): "render" | typeof END {
+  return state.outcome ? END : "render";
+}
+
 /** Without a checkpointer the graph still runs, but interrupt() can't pause it. */
 export function buildAdGraph(checkpointer?: BaseCheckpointSaver) {
   return new StateGraph(AdState)
@@ -175,12 +197,14 @@ export function buildAdGraph(checkpointer?: BaseCheckpointSaver) {
     .addNode("pickHook", pickHook)
     .addNode("storyboardWriter", storyboardWriter)
     .addNode("render", render)
+    .addNode("approveVideo", approveVideo)
     .addEdge(START, "hookWriter")
     .addEdge("hookWriter", "critic")
     .addConditionalEdges("critic", afterCritic, ["hookWriter", "pickHook"])
     .addConditionalEdges("pickHook", afterPick, ["hookWriter", "storyboardWriter"])
     .addEdge("storyboardWriter", "render")
-    .addEdge("render", END)
+    .addEdge("render", "approveVideo")
+    .addConditionalEdges("approveVideo", afterApprove, ["render", END])
     .compile({ checkpointer });
 }
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { afterCritic, applyHookDecision, MAX_LOOPS, PASS_SCORE } from "./graph.ts";
+import { afterCritic, applyHookDecision, applyVideoDecision, MAX_LOOPS, PASS_SCORE } from "./graph.ts";
 import type { ScoredHook } from "./schemas.ts";
 
 const hook = (id: string, score: number): ScoredHook => ({
@@ -13,7 +13,7 @@ const hook = (id: string, score: number): ScoredHook => ({
 });
 
 const state = (hooks: ScoredHook[], loops = 1) =>
-  ({ brief: {} as never, hooks, feedback: "Too generic.", loops, chosenHook: null, storyboard: null, trailer: null, videoUrl: null, trail: [] });
+  ({ brief: {} as never, hooks, feedback: "Too generic.", loops, chosenHook: null, storyboard: null, trailer: null, videoUrl: null, outcome: null, trail: [] });
 
 test("low scores loop back to the writer until the cap, then pause for a pick", () => {
   assert.equal(afterCritic(state([hook("h1", PASS_SCORE - 1)], 1)), "hookWriter");
@@ -65,4 +65,12 @@ test("trailer variables carry only storyboard words and suspect names", async ()
   assert.equal(vars.suspect3, undefined);
   assert.ok(vars.shot3.length <= 72);
   assert.doesNotMatch(JSON.stringify(vars), /personality|isKiller|solution|alibi/);
+});
+
+test("video decisions: approve and discard end the run, rerender goes back for a new render", () => {
+  assert.equal(applyVideoDecision({ action: "approve" }).outcome, "ready_to_post");
+  assert.equal(applyVideoDecision({ action: "discard" }).outcome, "discarded");
+  const again = applyVideoDecision({ action: "rerender" });
+  assert.equal(again.outcome, undefined);
+  assert.equal(again.videoUrl, null);
 });

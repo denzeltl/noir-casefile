@@ -1,12 +1,27 @@
 import { NextResponse, after } from "next/server";
 import { getDb } from "@/lib/db";
-import { HookDecisionSchema, RenderResultSchema } from "@/lib/ads/schemas";
+import { HookDecisionSchema, RenderResultSchema, VideoDecisionSchema } from "@/lib/ads/schemas";
 import { pausedAt, resumeRun } from "@/lib/ads/runner";
+
+const PAUSES = {
+  pickHook: {
+    schema: HookDecisionSchema,
+    from: "waiting_hook",
+    hint: "Choose a hook, edit one, or send a rewrite note.",
+  },
+  render: { schema: RenderResultSchema, from: "rendering", hint: 'Send { action: "rendered", videoUrl }.' },
+  approveVideo: {
+    schema: VideoDecisionSchema,
+    from: "waiting_video",
+    hint: "Approve, re-render or discard the video.",
+  },
+} as const;
 
 /**
  * POST /api/ads/runs/[id]/resume — answers whichever interrupt the run is paused at.
  *   pick_hook (admin):  { action: "choose", hookId } | { action: "edit", hookId, hook, script } | { action: "rewrite", note }
  *   render (worker):    { action: "rendered", videoUrl }
+ *   approve_video (admin): { action: "approve" | "rerender" | "discard" }
  * Auth: admin cookie or x-n8n-secret, enforced in src/proxy.ts.
  */
 export async function POST(request: Request, ctx: RouteContext<"/api/ads/runs/[id]/resume">) {
@@ -18,15 +33,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ads/runs/[i
   if (!node) return NextResponse.json({ error: "This run isn't waiting for an answer." }, { status: 409 });
 
   const body = await request.json().catch(() => null);
-  const parsed = node === "pickHook" ? HookDecisionSchema.safeParse(body) : RenderResultSchema.safeParse(body);
-  if (!parsed.success) {
-    const want = node === "pickHook" ? "Choose a hook, edit one, or send a rewrite note." : "Send { action: \"rendered\", videoUrl }.";
-    return NextResponse.json({ error: want }, { status: 400 });
-  }
+  const pause = PAUSES[node];
+  const parsed = pause.schema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: pause.hint }, { status: 400 });
 
   // Claim the pause: only one answer wins a double submit. A render result
   // must come from the worker that claimed the run (status = rendering).
-  const from = node === "pickHook" ? "waiting_hook" : "rendering";
+  const from = pause.from;
   const { data: claimed, error } = await db
     .from("ad_runs")
     .update({ status: "running", updated_at: new Date().toISOString() })

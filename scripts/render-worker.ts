@@ -104,7 +104,8 @@ async function render(id: string, trailer: Record<string, string>): Promise<stri
     );
     if (!(Math.abs(seconds - TARGET_SECONDS) < 1)) throw new Error(`Render is ${seconds}s, expected ~${TARGET_SECONDS}s.`);
 
-    const path = `${id}.mp4`;
+    // A new name per render, so a re-render never serves a cached copy of the old one.
+    const path = `${id}/${Date.now()}.mp4`;
     const { error } = await db.storage
       .from(BUCKET)
       .upload(path, readFileSync(mp4), { contentType: "video/mp4", upsert: true });

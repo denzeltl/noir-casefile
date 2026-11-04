@@ -4,7 +4,7 @@ import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { getDb } from "@/lib/db";
 import type { AdBrief } from "./brief";
 import { buildAdGraph, RECURSION_LIMIT } from "./graph";
-import type { HookDecision, RenderResult } from "./schemas";
+import type { HookDecision, RenderResult, VideoDecision } from "./schemas";
 
 let saver: Promise<PostgresSaver> | null = null;
 
@@ -33,23 +33,25 @@ export function startRun(runId: string, brief: AdBrief) {
 }
 
 /** Answer whichever interrupt the run is paused at and run to the next pause. */
-export function resumeRun(runId: string, answer: HookDecision | RenderResult) {
+export function resumeRun(runId: string, answer: HookDecision | RenderResult | VideoDecision) {
   return advance(runId, new Command({ resume: answer }));
 }
 
-export type PausedAt = "pickHook" | "render" | null;
+export type PausedAt = "pickHook" | "render" | "approveVideo" | null;
+const PAUSES = ["pickHook", "render", "approveVideo"];
 
 /** The node the run's checkpoint is paused at, or null. Guards the resume route. */
 export async function pausedAt(runId: string): Promise<PausedAt> {
   const snap = await (await getGraph()).getState({ configurable: { thread_id: runId } });
   const task = snap.tasks.find((t) => t.interrupts.length > 0);
-  return task?.name === "pickHook" || task?.name === "render" ? task.name : null;
+  return task && PAUSES.includes(task.name) ? (task.name as PausedAt) : null;
 }
 
-// ad_runs.status for each pause; a finished graph has a video waiting for approval.
+// ad_runs.status for each pause. A finished graph carries its outcome instead.
 const STATUS_AT: Record<Exclude<PausedAt, null>, string> = {
   pickHook: "waiting_hook",
   render: "waiting_render",
+  approveVideo: "waiting_video",
 };
 
 /**
@@ -67,7 +69,7 @@ async function advance(runId: string, input: Parameters<Awaited<ReturnType<typeo
     await db
       .from("ad_runs")
       .update({
-        status: node ? STATUS_AT[node] : "waiting_video",
+        status: node ? STATUS_AT[node] : (result.outcome ?? "failed"),
         hooks_json: { hooks: result.hooks, trail: result.trail, critique: result.feedback },
         chosen_hook: result.chosenHook ?? null,
         storyboard_json: result.storyboard ? { storyboard: result.storyboard, trailer: result.trailer } : null,

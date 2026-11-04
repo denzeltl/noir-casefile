@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminRun } from "@/lib/admin-data";
-import { PASS_SCORE, type HookDecision } from "@/lib/ads/schemas";
+import { PASS_SCORE, type HookDecision, type VideoDecision } from "@/lib/ads/schemas";
 
 const STAMP: Record<string, { label: string; className: string }> = {
   waiting_hook: { label: "Needs you", className: "border-pen text-pen" },
@@ -13,7 +13,8 @@ const STAMP: Record<string, { label: string; className: string }> = {
   render_failed: { label: "Render failed", className: "border-pen text-pen" },
   waiting_video: { label: "Needs you", className: "border-pen text-pen" },
   failed: { label: "Failed", className: "border-pen text-pen" },
-  ready_to_post: { label: "Ready", className: "border-success-ink text-success-ink" },
+  ready_to_post: { label: "Ready to post", className: "border-success-ink text-success-ink" },
+  discarded: { label: "Discarded", className: "border-clip text-clip" },
 };
 
 // The graph and the render worker run in the background; while they do, re-read the run.
@@ -84,25 +85,10 @@ export default function RunDesk({ run }: { run: AdminRun }) {
                 : "The storyboard is written. The render worker is offline; start it with npm run render-worker and it will render this run."}
             <WorkerStatus online={run.workerOnline} lastSeen={run.workerLastSeen} />
           </StatusSheet>
-        ) : run.status === "waiting_video" && run.videoUrl ? (
-          <div className="sheet pane-in grid gap-6 px-6 py-6 sm:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
-            <video
-              src={run.videoUrl}
-              controls
-              playsInline
-              preload="metadata"
-              className="aspect-[9/16] w-full max-w-[280px] rounded-sm bg-ink"
-            />
-            <div className="min-w-0">
-              <p className="label">Trailer rendered</p>
-              <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed">
-                Watch it through. Approving, re-rendering or discarding it happens here once the review step is wired up.
-              </p>
-              <a href={run.videoUrl} download className="link-draw label mt-4 inline-flex min-h-11 items-center text-ink">
-                Download MP4
-              </a>
-            </div>
-          </div>
+        ) : (run.status === "waiting_video" || run.status === "ready_to_post") && run.videoUrl ? (
+          <VideoReview run={run} />
+        ) : run.status === "discarded" ? (
+          <StatusSheet label="Discarded">This run was thrown out. Start a new ad for this case from the register.</StatusSheet>
         ) : run.status === "running" && run.chosenHook ? (
           <StatusSheet label="Writing the storyboard">
             “{run.chosenHook.hook}” is locked in. The storyboard is being written; the render worker takes it from there.
@@ -116,6 +102,114 @@ export default function RunDesk({ run }: { run: AdminRun }) {
         )}
       </div>
     </>
+  );
+}
+
+/** Interrupt #2: watch the render, then approve it, re-render it, or throw it out. */
+function VideoReview({ run }: { run: AdminRun }) {
+  const router = useRouter();
+  const ready = run.status === "ready_to_post";
+  const [pending, setPending] = useState<VideoDecision["action"] | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function decide(action: VideoDecision["action"]) {
+    setPending(action);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/ads/runs/${run.id}/resume`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action } satisfies VideoDecision),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotice(body.error ?? `The studio answered ${res.status}.`);
+        setPending(null);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setNotice("Couldn't reach the server. Check your connection and try again.");
+      setPending(null);
+    }
+  }
+
+  const quiet =
+    "btn btn-quiet min-h-11 cursor-pointer rounded-md px-4 font-mono text-[12px] uppercase tracking-[0.04em] disabled:cursor-not-allowed disabled:opacity-40";
+
+  return (
+    <div className="sheet pane-in grid gap-6 px-6 py-6 sm:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
+      <video
+        src={run.videoUrl!}
+        controls
+        playsInline
+        preload="metadata"
+        className="aspect-[9/16] w-full max-w-[280px] rounded-sm bg-ink"
+      />
+      <div className="flex min-w-0 flex-col">
+        <p className={`label ${ready ? "text-success-ink" : ""}`}>{ready ? "Ready to post" : "Trailer rendered"}</p>
+        <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed">
+          {ready
+            ? "Approved. Download it and post it by hand on TikTok, Reels or Shorts."
+            : "Watch it through. Approve it for the posting queue, render it again from the same storyboard, or throw it out."}
+        </p>
+
+        {ready ? (
+          <a
+            href={run.videoUrl!}
+            download
+            className="btn btn-ink mt-5 inline-flex min-h-11 items-center self-start rounded-md px-5 font-mono text-[13px] font-semibold uppercase"
+          >
+            Download MP4
+          </a>
+        ) : (
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={pending !== null}
+              onClick={() => decide("approve")}
+              className="btn btn-ink min-h-11 cursor-pointer rounded-md px-5 font-mono text-[13px] font-semibold uppercase disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {pending === "approve" ? "Approving…" : "Approve"}
+            </button>
+            <button type="button" disabled={pending !== null} onClick={() => decide("rerender")} className={quiet}>
+              {pending === "rerender" ? "Queuing…" : "Re-render"}
+            </button>
+            {confirmDiscard ? (
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-[15px] text-pen">Throw this run out?</span>
+                <button
+                  type="button"
+                  disabled={pending !== null}
+                  onClick={() => decide("discard")}
+                  className="btn btn-pen min-h-11 cursor-pointer rounded-md px-4 font-mono text-[12px] font-semibold uppercase tracking-[0.04em] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {pending === "discard" ? "Discarding…" : "Yes, discard"}
+                </button>
+                <button type="button" disabled={pending !== null} onClick={() => setConfirmDiscard(false)} className={quiet}>
+                  Keep it
+                </button>
+              </span>
+            ) : (
+              <button type="button" disabled={pending !== null} onClick={() => setConfirmDiscard(true)} className={quiet}>
+                Discard
+              </button>
+            )}
+          </div>
+        )}
+        {notice && (
+          <p className="mt-3 text-[15px] text-pen" aria-live="polite">
+            {notice}
+          </p>
+        )}
+        {!ready && (
+          <a href={run.videoUrl!} download className="link-draw label mt-auto inline-flex min-h-11 items-center self-start pt-4 text-ink">
+            Download MP4
+          </a>
+        )}
+      </div>
+    </div>
   );
 }
 
