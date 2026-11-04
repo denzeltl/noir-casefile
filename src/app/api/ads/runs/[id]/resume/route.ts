@@ -13,7 +13,7 @@ const PAUSES = {
   approveVideo: {
     schema: VideoDecisionSchema,
     from: "waiting_video",
-    hint: "Approve, re-render or discard the video.",
+    hint: "Approve, re-render, revise with a note (3–500 characters) or discard the video.",
   },
 } as const;
 
@@ -21,7 +21,7 @@ const PAUSES = {
  * POST /api/ads/runs/[id]/resume — answers whichever interrupt the run is paused at.
  *   pick_hook (admin):  { action: "choose", hookId } | { action: "edit", hookId, hook, script } | { action: "rewrite", note }
  *   render (worker):    { action: "rendered", videoUrl }
- *   approve_video (admin): { action: "approve" | "rerender" | "discard" }
+ *   approve_video (admin): { action: "approve" | "rerender" | "discard" } | { action: "revise", note }
  * Auth: admin cookie or x-n8n-secret, enforced in src/proxy.ts.
  */
 export async function POST(request: Request, ctx: RouteContext<"/api/ads/runs/[id]/resume">) {

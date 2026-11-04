@@ -118,22 +118,25 @@ export default function RunDesk({ run }: { run: AdminRun }) {
   );
 }
 
-/** Interrupt #2: watch the render, then approve it, re-render it, or throw it out. */
+/** Interrupt #2: watch the render, then approve it, re-render it as is, revise it with a note, or throw it out. */
 function VideoReview({ run }: { run: AdminRun }) {
   const router = useRouter();
   const ready = run.status === "ready_to_post";
   const [pending, setPending] = useState<VideoDecision["action"] | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [revising, setRevising] = useState(false);
+  const [note, setNote] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
 
-  async function decide(action: VideoDecision["action"]) {
+  async function decide(decision: VideoDecision) {
+    const { action } = decision;
     setPending(action);
     setNotice(null);
     try {
       const res = await fetch(`/api/ads/runs/${run.id}/resume`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action } satisfies VideoDecision),
+        body: JSON.stringify(decision),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -165,7 +168,7 @@ function VideoReview({ run }: { run: AdminRun }) {
         <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed">
           {ready
             ? "Approved. Download it and post it by hand on TikTok, Reels or Shorts."
-            : "Watch it through. Approve it for the posting queue, render it again from the same storyboard, or throw it out."}
+            : "Watch it through. Approve it for the posting queue, render it again as is (for a glitchy render), revise the storyboard with a note, or throw it out."}
         </p>
 
         {ready ? (
@@ -181,13 +184,23 @@ function VideoReview({ run }: { run: AdminRun }) {
             <button
               type="button"
               disabled={pending !== null}
-              onClick={() => decide("approve")}
+              onClick={() => decide({ action: "approve" })}
               className="btn btn-ink min-h-11 cursor-pointer rounded-md px-5 font-mono text-[13px] font-semibold uppercase disabled:cursor-not-allowed disabled:opacity-40"
             >
               {pending === "approve" ? "Approving…" : "Approve"}
             </button>
-            <button type="button" disabled={pending !== null} onClick={() => decide("rerender")} className={quiet}>
-              {pending === "rerender" ? "Queuing…" : "Re-render"}
+            <button type="button" disabled={pending !== null} onClick={() => decide({ action: "rerender" })} className={quiet}>
+              {pending === "rerender" ? "Queuing…" : "Re-render as is"}
+            </button>
+            <button
+              type="button"
+              aria-expanded={revising}
+              aria-controls="revise-note-box"
+              disabled={pending !== null}
+              onClick={() => setRevising((r) => !r)}
+              className={quiet}
+            >
+              {revising ? "Cancel revision" : "Revise with note"}
             </button>
             {confirmDiscard ? (
               <span className="flex flex-wrap items-center gap-2">
@@ -195,7 +208,7 @@ function VideoReview({ run }: { run: AdminRun }) {
                 <button
                   type="button"
                   disabled={pending !== null}
-                  onClick={() => decide("discard")}
+                  onClick={() => decide({ action: "discard" })}
                   className="btn btn-pen min-h-11 cursor-pointer rounded-md px-4 font-mono text-[12px] font-semibold uppercase tracking-[0.04em] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {pending === "discard" ? "Discarding…" : "Yes, discard"}
@@ -209,6 +222,31 @@ function VideoReview({ run }: { run: AdminRun }) {
                 Discard
               </button>
             )}
+          </div>
+        )}
+        {!ready && revising && (
+          <div id="revise-note-box" className="pane-in mt-4">
+            <label htmlFor="revise-note" className="label">
+              Note for the storyboard writer
+            </label>
+            <textarea
+              id="revise-note"
+              rows={2}
+              autoFocus
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. Shot 2 is too vague, show the cracked bead."
+              className="field mt-1.5 w-full rounded-sm border border-rule-strong bg-sheet px-3 py-2.5 text-[15px]"
+            />
+            <button
+              type="button"
+              disabled={pending !== null || note.trim().length < 3}
+              onClick={() => decide({ action: "revise", note: note.trim() })}
+              className="btn btn-ink mt-2 min-h-11 cursor-pointer rounded-md px-5 font-mono text-[13px] font-semibold uppercase disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {pending === "revise" ? "Sending…" : "Revise and re-render"}
+            </button>
           </div>
         )}
         {notice && (

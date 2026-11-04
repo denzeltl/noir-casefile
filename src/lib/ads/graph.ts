@@ -35,6 +35,8 @@ export const AdState = Annotation.Root({
   storyboard: Annotation<Storyboard | null>({ reducer: (_, next) => next, default: () => null }),
   // What the render worker feeds the HyperFrames template.
   trailer: Annotation<TrailerVariables | null>({ reducer: (_, next) => next, default: () => null }),
+  // Producer's note from "Revise with note" at interrupt #2; consumed by the next storyboard.
+  storyboardNote: Annotation<string | null>({ reducer: (_, next) => next, default: () => null }),
   videoUrl: Annotation<string | null>({ reducer: (_, next) => next, default: () => null }),
   // How the run ended at interrupt #2; null while it is still going.
   outcome: Annotation<"ready_to_post" | "discarded" | null>({ reducer: (_, next) => next, default: () => null }),
@@ -149,11 +151,16 @@ Rules:
 
 async function storyboardWriter(state: State): Promise<Partial<State>> {
   const hook = state.chosenHook!;
+  const revision =
+    state.storyboardNote && state.storyboard
+      ? `\n\nRevise this storyboard:\n${JSON.stringify(state.storyboard, null, 2)}\n` +
+        `The producer's note: ${state.storyboardNote}\nChange what the note asks for; keep the rest.`
+      : "";
   const { data, model } = await structuredCall({
     schema: StoryboardSchema,
     name: "storyboard",
     system: STORYBOARD_SYSTEM,
-    user: `Case brief (JSON):\n${JSON.stringify(state.brief, null, 2)}\n\nApproved hook: ${hook.hook}\nApproved script: ${hook.script}`,
+    user: `Case brief (JSON):\n${JSON.stringify(state.brief, null, 2)}\n\nApproved hook: ${hook.hook}\nApproved script: ${hook.script}${revision}`,
     primary: AD_MODELS.writer,
     fallback: AD_MODELS.geminiFallback,
     temperature: 0.7,
@@ -161,6 +168,7 @@ async function storyboardWriter(state: State): Promise<Partial<State>> {
   return {
     storyboard: data,
     trailer: toTrailerVariables(data, state.brief),
+    storyboardNote: null,
     trail: [step("storyboardWriter", model)],
   };
 }
@@ -186,12 +194,15 @@ export function applyVideoDecision(decision: VideoDecision): Partial<State> {
   const trail = [step("approveVideo", decision.action)];
   if (decision.action === "approve") return { outcome: "ready_to_post", trail };
   if (decision.action === "discard") return { outcome: "discarded", trail };
+  // New storyboard from the note, then a fresh render.
+  if (decision.action === "revise") return { videoUrl: null, storyboardNote: decision.note, trail };
   // Same storyboard, fresh render: back to the render pause for the worker.
   return { videoUrl: null, trail };
 }
 
-function afterApprove(state: State): "render" | typeof END {
-  return state.outcome ? END : "render";
+export function afterApprove(state: State): "render" | "storyboardWriter" | typeof END {
+  if (state.outcome) return END;
+  return state.storyboardNote ? "storyboardWriter" : "render";
 }
 
 /** Without a checkpointer the graph still runs, but interrupt() can't pause it. */
@@ -209,7 +220,7 @@ export function buildAdGraph(checkpointer?: BaseCheckpointSaver) {
     .addConditionalEdges("pickHook", afterPick, ["hookWriter", "storyboardWriter"])
     .addEdge("storyboardWriter", "render")
     .addEdge("render", "approveVideo")
-    .addConditionalEdges("approveVideo", afterApprove, ["render", END])
+    .addConditionalEdges("approveVideo", afterApprove, ["render", "storyboardWriter", END])
     .compile({ checkpointer });
 }
 

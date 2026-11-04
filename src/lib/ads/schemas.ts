@@ -80,9 +80,11 @@ export const RenderResultSchema = z.object({
 });
 
 /** The admin's answer at interrupt #2, after watching the render. */
-export const VideoDecisionSchema = z.object({
-  action: z.enum(["approve", "rerender", "discard"]),
-});
+export const VideoDecisionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.enum(["approve", "rerender", "discard"]) }),
+  // Rewrite the storyboard with the producer's note, then render again.
+  z.object({ action: z.literal("revise"), note: z.string().trim().min(3).max(500) }),
+]);
 
 export type Motif = (typeof MOTIFS)[number];
 export type Storyboard = z.infer<typeof StoryboardSchema>;

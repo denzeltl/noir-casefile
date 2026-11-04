@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { afterCritic, applyHookDecision, applyVideoDecision, MAX_LOOPS, PASS_SCORE } from "./graph.ts";
+import { afterApprove, afterCritic, applyHookDecision, applyVideoDecision, MAX_LOOPS, PASS_SCORE } from "./graph.ts";
 import type { ScoredHook } from "./schemas.ts";
 
 const hook = (id: string, score: number): ScoredHook => ({
@@ -13,7 +13,7 @@ const hook = (id: string, score: number): ScoredHook => ({
 });
 
 const state = (hooks: ScoredHook[], loops = 1) =>
-  ({ brief: {} as never, hooks, feedback: "Too generic.", loops, chosenHook: null, storyboard: null, trailer: null, videoUrl: null, outcome: null, trail: [] });
+  ({ brief: {} as never, hooks, feedback: "Too generic.", loops, chosenHook: null, storyboard: null, storyboardNote: null, trailer: null, videoUrl: null, outcome: null, trail: [] });
 
 test("low scores loop back to the writer until the cap, then pause for a pick", () => {
   assert.equal(afterCritic(state([hook("h1", PASS_SCORE - 1)], 1)), "hookWriter");
@@ -73,4 +73,15 @@ test("video decisions: approve and discard end the run, rerender goes back for a
   const again = applyVideoDecision({ action: "rerender" });
   assert.equal(again.outcome, undefined);
   assert.equal(again.videoUrl, null);
+});
+
+test("video decisions route: rerender reuses the storyboard, revise rewrites it with the note", () => {
+  const base = { ...state([], 1), outcome: null } as never as Parameters<typeof afterApprove>[0];
+  const rerender = { ...base, ...applyVideoDecision({ action: "rerender" }) };
+  assert.equal(afterApprove(rerender), "render");
+  const revise = { ...base, ...applyVideoDecision({ action: "revise", note: "Shot 2 is too vague." }) };
+  assert.equal(revise.storyboardNote, "Shot 2 is too vague.");
+  assert.equal(revise.videoUrl, null);
+  assert.equal(afterApprove(revise), "storyboardWriter");
+  assert.notEqual(afterApprove({ ...base, ...applyVideoDecision({ action: "approve" }) }), "render");
 });

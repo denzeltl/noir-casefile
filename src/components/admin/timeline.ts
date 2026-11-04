@@ -17,6 +17,7 @@ const DECISION: Record<string, string> = {
   "approveVideo:approve": "Approved the video",
   "approveVideo:rerender": "Asked for a re-render",
   "approveVideo:discard": "Discarded the video",
+  "approveVideo:revise": "Asked for a revision",
 };
 
 export interface TimelineRow {
