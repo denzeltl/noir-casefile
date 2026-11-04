@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import type { AdBrief } from "@/lib/ads/brief";
-import { buildAdGraph, RECURSION_LIMIT } from "@/lib/ads/graph";
+import { startRun } from "@/lib/ads/runner";
 
 const BodySchema = z.object({ caseIds: z.array(z.string().min(1)).min(1).max(20) });
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     runs.push({ caseId, runId, status: "running", created: true });
-    after(() => runGraph(runId, c.brief_json as AdBrief));
+    after(() => startRun(runId, c.brief_json as AdBrief));
   }
 
   const status = runs.length === 0 ? 404 : 202;
@@ -65,31 +65,4 @@ async function findActiveRun(caseId: string) {
     .in("status", ACTIVE)
     .maybeSingle();
   return data;
-}
-
-/** Graph v1: writer ⇄ critic until a hook passes, then wait for the admin's pick. */
-async function runGraph(runId: string, brief: AdBrief) {
-  const db = getDb()!;
-  try {
-    const result = await buildAdGraph().invoke({ brief }, { recursionLimit: RECURSION_LIMIT });
-    await db
-      .from("ad_runs")
-      .update({
-        status: "waiting_hook",
-        hooks_json: { hooks: result.hooks, trail: result.trail },
-        loops: result.loops,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", runId);
-  } catch (err) {
-    console.error(`[ads] run ${runId} failed:`, err);
-    await db
-      .from("ad_runs")
-      .update({
-        status: "failed",
-        error: err instanceof Error ? err.message.slice(0, 1000) : String(err),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", runId);
-  }
 }

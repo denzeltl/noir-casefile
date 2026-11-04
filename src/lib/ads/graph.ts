@@ -1,11 +1,19 @@
-import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
+import { Annotation, END, START, StateGraph, interrupt, type BaseCheckpointSaver } from "@langchain/langgraph";
 import type { AdBrief } from "./brief.ts";
 import { AD_MODELS } from "./models.ts";
-import { CritiqueSchema, HookSetSchema, type Hook, type ScoredHook } from "./schemas.ts";
+import {
+  CritiqueSchema,
+  HookDecisionSchema,
+  HookSetSchema,
+  PASS_SCORE,
+  type Hook,
+  type HookDecision,
+  type ScoredHook,
+} from "./schemas.ts";
 import { structuredCall } from "./structured.ts";
 
 export const MAX_LOOPS = 3;
-export const PASS_SCORE = 7;
+export { PASS_SCORE };
 
 /**
  * Graph state. Only the spoiler-free brief ever enters it: the full Case
@@ -16,6 +24,8 @@ export const AdState = Annotation.Root({
   hooks: Annotation<ScoredHook[]>({ reducer: (_, next) => next, default: () => [] }),
   feedback: Annotation<string | null>({ reducer: (_, next) => next, default: () => null }),
   loops: Annotation<number>({ reducer: (_, next) => next, default: () => 0 }),
+  // Set once the admin picks (or edits) a hook at interrupt #1.
+  chosenHook: Annotation<ScoredHook | null>({ reducer: (_, next) => next, default: () => null }),
   // Node-by-node trail for the admin timeline.
   trail: Annotation<string[]>({ reducer: (a, b) => a.concat(b), default: () => [] }),
 });
@@ -77,20 +87,56 @@ async function critic(state: State): Promise<Partial<State>> {
 }
 
 /** Loop back to the writer while the best hook is under PASS_SCORE, at most MAX_LOOPS writes. */
-export function afterCritic(state: State): "hookWriter" | typeof END {
+export function afterCritic(state: State): "hookWriter" | "pickHook" {
   const best = state.hooks[0]?.score ?? 0;
-  return best < PASS_SCORE && state.loops < MAX_LOOPS ? "hookWriter" : END;
+  return best < PASS_SCORE && state.loops < MAX_LOOPS ? "hookWriter" : "pickHook";
 }
 
-export function buildAdGraph() {
+/**
+ * Interrupt #1: pause until the admin chooses a hook, edits one, or asks for a
+ * rewrite. The node re-runs from the top on resume, so nothing before
+ * interrupt() may have side effects.
+ */
+async function pickHook(state: State): Promise<Partial<State>> {
+  const decision = HookDecisionSchema.parse(interrupt({ kind: "pick_hook", hooks: state.hooks }));
+  return applyHookDecision(state, decision);
+}
+
+export function applyHookDecision(state: State, decision: HookDecision): Partial<State> {
+  if (decision.action === "rewrite") {
+    return {
+      feedback: `The producer asked for a rewrite: ${decision.note}
+
+Last critique:
+${state.feedback ?? "none"}`,
+      chosenHook: null,
+      trail: ["pickHook:rewrite"],
+    };
+  }
+  const hook = state.hooks.find((h) => h.id === decision.hookId);
+  if (!hook) throw new Error(`Unknown hook id ${decision.hookId}`);
+  const chosen =
+    decision.action === "edit" ? { ...hook, hook: decision.hook, script: decision.script } : hook;
+  return { chosenHook: chosen, trail: [`pickHook:${decision.action}`] };
+}
+
+// A rewrite is one extra pass even when the auto-loop budget is spent.
+function afterPick(state: State): "hookWriter" | typeof END {
+  return state.chosenHook ? END : "hookWriter";
+}
+
+/** Without a checkpointer the graph still runs, but interrupt() can't pause it. */
+export function buildAdGraph(checkpointer?: BaseCheckpointSaver) {
   return new StateGraph(AdState)
     .addNode("hookWriter", hookWriter)
     .addNode("critic", critic)
+    .addNode("pickHook", pickHook)
     .addEdge(START, "hookWriter")
     .addEdge("hookWriter", "critic")
-    .addConditionalEdges("critic", afterCritic, ["hookWriter", END])
-    .compile();
+    .addConditionalEdges("critic", afterCritic, ["hookWriter", "pickHook"])
+    .addConditionalEdges("pickHook", afterPick, ["hookWriter", END])
+    .compile({ checkpointer });
 }
 
-/** writer + critic per loop, plus headroom. */
+/** Per invoke: writer + critic per loop, the pick, plus headroom. */
 export const RECURSION_LIMIT = MAX_LOOPS * 2 + 4;

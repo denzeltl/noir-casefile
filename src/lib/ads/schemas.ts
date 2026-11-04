@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** A hook the critic scores at least this high is good enough to ship. */
+export const PASS_SCORE = 7;
+
 export const HookSchema = z.object({
   id: z.string().describe("Short id, e.g. h1"),
   hook: z.string().describe("The opening line on screen, max ~12 words"),
@@ -26,6 +29,19 @@ export const CritiqueSchema = z.object({
   summary: z.string().describe("One sentence of overall direction for a rewrite"),
 });
 
+/** The admin's answer at interrupt #1 (body of the resume route). */
+export const HookDecisionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("choose"), hookId: z.string().min(1) }),
+  z.object({
+    action: z.literal("edit"),
+    hookId: z.string().min(1),
+    hook: z.string().trim().min(1).max(160),
+    script: z.string().trim().min(1).max(600),
+  }),
+  z.object({ action: z.literal("rewrite"), note: z.string().trim().min(3).max(500) }),
+]);
+
+export type HookDecision = z.infer<typeof HookDecisionSchema>;
 export type Hook = z.infer<typeof HookSchema>;
 export type HookSet = z.infer<typeof HookSetSchema>;
 export type Critique = z.infer<typeof CritiqueSchema>;

@@ -2,6 +2,7 @@
 //   node --env-file=.env.local scripts/run-ad-graph.ts [caseId]
 // With no caseId it uses the newest case.
 import { createClient } from "@supabase/supabase-js";
+import { Command, MemorySaver } from "@langchain/langgraph";
 import type { AdBrief } from "../src/lib/ads/brief.ts";
 import { buildAdGraph, RECURSION_LIMIT } from "../src/lib/ads/graph.ts";
 
@@ -19,7 +20,12 @@ const brief = data[0].brief_json as AdBrief;
 console.log(`Case: ${brief.title} (${data[0].id})\n`);
 
 const started = Date.now();
-const result = await buildAdGraph().invoke({ brief }, { recursionLimit: RECURSION_LIMIT });
+// In-memory checkpoints: the script runs to interrupt #1, then picks the top hook itself.
+const graph = buildAdGraph(new MemorySaver());
+const config = { configurable: { thread_id: `script-${Date.now()}` }, recursionLimit: RECURSION_LIMIT };
+const paused = await graph.invoke({ brief }, config);
+console.log(`Paused at pick_hook after ${paused.loops} loop(s); choosing ${paused.hooks[0].id}.`);
+const result = await graph.invoke(new Command({ resume: { action: "choose", hookId: paused.hooks[0].id } }), config);
 
 console.log(`Trail: ${result.trail.join(" → ")}`);
 console.log(`Loops: ${result.loops}   (${((Date.now() - started) / 1000).toFixed(1)}s)\n`);

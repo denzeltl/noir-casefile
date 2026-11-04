@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // node-postgres (LangGraph checkpointer) must stay a real Node require.
+  serverExternalPackages: ["pg"],
   partialPrefetching: true,
   turbopack: {
     rules: {

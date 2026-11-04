@@ -1,6 +1,7 @@
 import "server-only";
 import { getDb } from "@/lib/db";
 import type { AdBrief } from "@/lib/ads/brief";
+import type { ScoredHook } from "@/lib/ads/schemas";
 import { DIFFICULTY_CONFIGS, DifficultySchema } from "@/types/case";
 
 /** What the admin sees about a case's ad, collapsed from ad_runs.status. */
@@ -81,4 +82,46 @@ export async function listAdminCases(): Promise<AdminCaseRow[] | null> {
       runId: run && run.status !== "discarded" ? run.id : null,
     };
   });
+}
+
+export interface AdminRun {
+  id: string;
+  status: string;
+  caseTitle: string;
+  setting: string;
+  hooks: ScoredHook[];
+  trail: string[];
+  /** The critic's one-line direction (first line of its feedback). */
+  critique: string | null;
+  chosenHook: ScoredHook | null;
+  loops: number;
+  error: string | null;
+}
+
+/** One run for /admin/runs/[id]. Brief fields only, never case_json. Null if missing. */
+export async function getAdminRun(id: string): Promise<AdminRun | null> {
+  const db = getDb();
+  if (!db) throw new Error("No database connected.");
+  const { data, error } = await db
+    .from("ad_runs")
+    .select("id, status, hooks_json, chosen_hook, loops, error, cases(brief_json)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const brief = (data.cases as unknown as { brief_json: AdBrief } | null)?.brief_json;
+  const hooks = (data.hooks_json ?? {}) as { hooks?: ScoredHook[]; trail?: string[]; critique?: string };
+  return {
+    id: data.id,
+    status: data.status,
+    caseTitle: brief?.title ?? "Untitled case",
+    setting: brief?.setting ?? "",
+    hooks: hooks.hooks ?? [],
+    trail: (hooks.trail ?? []).map((t) => t.split(":")[0]),
+    critique: hooks.critique?.split("\n")[0] || null,
+    chosenHook: (data.chosen_hook as ScoredHook | null) ?? null,
+    loops: data.loops,
+    error: data.error,
+  };
 }
