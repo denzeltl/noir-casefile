@@ -7,9 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/**/*.test.ts"
+    "test": "node --test src/**/*.test.ts",
+    "ad-graph": "node --env-file=.env.local scripts/run-ad-graph.ts"
   },
   "dependencies": {
+    "@langchain/core": "^1.3.4",
+    "@langchain/google-genai": "^2.3.4",
+    "@langchain/groq": "^1.3.1",
+    "@langchain/langgraph": "^1.6.0",
     "@supabase/supabase-js": "^2.118.0",
     "groq-sdk": "^1.6.0",
     "lenis": "^1.3.27",

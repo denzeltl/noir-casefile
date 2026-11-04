@@ -38,6 +38,13 @@ export async function verifySessionToken(token: string | undefined): Promise<boo
   return safeEqual(sig, await sign(exp, secret));
 }
 
+/** x-n8n-secret check; false when N8N_SHARED_SECRET isn't set. */
+export async function n8nSecretMatches(input: string | null): Promise<boolean> {
+  const secret = process.env.N8N_SHARED_SECRET;
+  if (!secret || !input) return false;
+  return safeEqual(await sign(input, "n8n"), await sign(secret, "n8n"));
+}
+
 /** Constant-time password check (hashing first evens out lengths). */
 export async function passwordMatches(input: string): Promise<boolean> {
   const secret = process.env.ADMIN_PASSWORD;

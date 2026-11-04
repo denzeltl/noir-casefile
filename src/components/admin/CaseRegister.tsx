@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AdState, AdminCaseRow } from "@/lib/admin-data";
 
 const STAMP: Record<AdState, { label: string; className: string }> = {
@@ -22,6 +23,7 @@ const FILTERS: { id: string; label: string; short?: string; match: (s: AdState) 
 type Notice = { tone: "ok" | "error"; text: string } | null;
 
 export default function CaseRegister({ cases }: { cases: AdminCaseRow[] }) {
+  const router = useRouter();
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState(false);
@@ -59,6 +61,7 @@ export default function CaseRegister({ cases }: { cases: AdminCaseRow[] }) {
       } else {
         setNotice({ tone: "ok", text: `${caseIds.length === 1 ? "Ad run" : `${caseIds.length} ad runs`} started.` });
         setSelected(new Set());
+        router.refresh();
       }
     } catch {
       setNotice({ tone: "error", text: "Couldn't reach the server. Check your connection and try again." });
